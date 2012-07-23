@@ -1,6 +1,6 @@
 set(MONGO_DRIVER_LIBS
-    -L${Mongo_driver_PATH}
-    -l mongoclient
+    -L${MONGOCLIENT_PATH}/lib
+    mongoclient
     )
     
 #Lets us address our internal includes as <Persistence/foo.h>
@@ -17,7 +17,7 @@ SET(TARGET_SRC ${srcs})
 
 SET(TARGET_NAME PersistenceTest)
 ADD_EXECUTABLE(${TARGET_NAME} ${TARGET_SRC})
-TARGET_LINK_LIBRARIES(${TARGET_NAME} Persistence ${MONGO_DRIVER_LIBS} )
+TARGET_LINK_LIBRARIES(${TARGET_NAME} Persistence ${MONGO_DRIVER_LIBS} ${Boost_LIBRARIES})
 
 
 #SET(INSTALL_INCDIR include)

@@ -4,7 +4,7 @@ project( Persistence )
 
 SET( CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMakeModules" )
 SET( Poco_DIR "${PROJECT_SOURCE_DIR}/CMakeModules" )
-SET( POCO_ROOT "$ENV{POCO_INSTALL_DIR}" )
+SET( POCO_ROOT "$ENV{POCO_INSTALL_DIR}" CACHE PATH "docstring" )
 SET( Poco_INCLUDE_DIR "${POCO_ROOT}/include" )
 SET( Poco_LIBRARY_DIR "${POCO_ROOT}/lib" )
 
@@ -14,16 +14,28 @@ option(BUILD_EXAMPLES "Build examples?" ON)
 
 set(BOOST_INCLUDEDIR "$ENV{BOOST_INSTALL_DIR}/include" CACHE PATH "docstring")
 
-FIND_PACKAGE(Boost)
+set(Boost_USE_STATIC_LIBS       OFF)
+set(Boost_USE_MULTITHREADED      ON)
+set(Boost_USE_STATIC_RUNTIME    OFF)
+
+FIND_PACKAGE(Boost 1.44.0 REQUIRED COMPONENTS system)
+
+option( BOOST_ALL_DYN_LINK "If set, use Boost dynamic libraries (boost_*); otherwise static (libboost_*)." OFF )
+if( BOOST_ALL_DYN_LINK )
+    add_definitions( -DBOOST_ALL_DYN_LINK )
+endif()
+
 FIND_PACKAGE(Poco COMPONENTS SQLite)
 
 set(MONGOCLIENT_PATH "$ENV{MONGOCLIENT_INSTALL_DIR}" CACHE PATH "docstring")
 
 INCLUDE_DIRECTORIES( 
     ${Boost_INCLUDE_DIRS}
-    ${MONGOCLIENT_PATH}
+    ${MONGOCLIENT_PATH}/include
     ${Poco_INCLUDE_DIR}
 )
+
+LINK_DIRECTORIES(${Poco_LIBRARY_DIR}/lib)
 
 ################################################################################
 # Platform specific definitions

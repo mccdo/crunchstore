@@ -1,8 +1,8 @@
-set( Persistence_LIBS )
+set( Persistence_LIBS PocoFoundation PocoData PocoDataSQLite )
 
 set(MONGO_DRIVER_LIBS
-    -L${Mongo_driver_PATH}
-    -l mongoclient
+    -L${MONGOCLIENT_PATH}/lib
+    mongoclient
     )
     
 #Lets us address our internal includes as <Persistence/foo.h>
@@ -24,7 +24,7 @@ SET(PUBLIC_HEADERS ${hdrs})
 
 SET(TARGET_NAME Persistence)
 ADD_LIBRARY(${TARGET_NAME} SHARED ${TARGET_SRC} ${PUBLIC_HEADERS})
-TARGET_LINK_LIBRARIES(${TARGET_NAME} ${MONGO_DRIVER_LIBS} boost_system PocoDataSQLite )
+TARGET_LINK_LIBRARIES(${TARGET_NAME} ${MONGO_DRIVER_LIBS} ${Persistence_LIBS} ${Boost_LIBRARIES})
 
 
 SET(INSTALL_INCDIR include)
