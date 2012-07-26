@@ -30,23 +30,19 @@
  * -----------------------------------------------------------------
  *
  *************** <auto-copyright.rb END do not edit this line> ***************/
-#pragma once
-
-#include <Persistence/Cache.h>
-
-#include <Persistence/ExportConfig.h>
+#include <Persistence/NullBuffer.h>
 
 namespace Persistence
 {
-
-class PERSISTENCE_EXPORT NullCache: public Cache
+////////////////////////////////////////////////////////////////////////////////
+NullBuffer::NullBuffer()
 {
-public:
-    NullCache();
-    // No virtual destructor and no virtual methods since there is no reason to
-    // derive from this class.
-    virtual void Buffer( std::vector< std::string > ids, BufferPriority priority = NORMAL_PRIORITY );
-
-};
-
 }
+////////////////////////////////////////////////////////////////////////////////
+void NullBuffer::Buffer( std::vector< std::string > ids, BufferBase::BufferPriority priority )
+{
+    ;
+}
+////////////////////////////////////////////////////////////////////////////////
+}
+

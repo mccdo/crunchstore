@@ -45,7 +45,7 @@
 #include <Poco/Data/RecordSet.h>
 #include <Poco/Data/BLOB.h>
 
-
+#include <iostream>
 
 namespace Persistence
 {
@@ -458,8 +458,8 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                 listQuery.clear();
 
                 BindableAnyWrapper* bindable;
-                unsigned int max = GetBoostAnyVectorSize( property->GetValue() );
-                for( unsigned int index = 0; index < max; index++ )
+                size_t max = GetBoostAnyVectorSize( property->GetValue() );
+                for( size_t index = 0; index < max; ++index )
                 {
                     // Build up query:
                     // INSERT INTO [newTableName]
@@ -684,8 +684,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
             {
                 std::vector< int > vec;
                 Poco::DynamicAny value;
-                int rowCount = recordset.rowCount();
-                for( int rowIndex = 0; rowIndex < rowCount; ++rowIndex )
+                size_t rowCount = recordset.rowCount();
+                for( size_t rowIndex = 0; rowIndex < rowCount; ++rowIndex )
                 {
                     value = recordset.value( 0, rowIndex );
                     vec.push_back( value.convert< int >() );
@@ -696,8 +696,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
             {
                 std::vector< float > vec;
                 Poco::DynamicAny value;
-                int rowCount = recordset.rowCount();
-                for( int rowIndex = 0; rowIndex < rowCount; ++rowIndex )
+                size_t rowCount = recordset.rowCount();
+                for( size_t rowIndex = 0; rowIndex < rowCount; ++rowIndex )
                 {
                     value = recordset.value( 0, rowIndex );
                     vec.push_back( value.convert< float >() );
@@ -708,8 +708,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
             {
                 std::vector< double > vec;
                 Poco::DynamicAny value;
-                int rowCount = recordset.rowCount();
-                for( int rowIndex = 0; rowIndex < rowCount; ++rowIndex )
+                size_t rowCount = recordset.rowCount();
+                for( size_t rowIndex = 0; rowIndex < rowCount; ++rowIndex )
                 {
                     value = recordset.value( 0, rowIndex );
                     vec.push_back( value.convert< double >() );
@@ -720,8 +720,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
             {
                 std::vector< std::string > vec;
                 Poco::DynamicAny value;
-                int rowCount = recordset.rowCount();
-                for( int rowIndex = 0; rowIndex < rowCount; ++rowIndex )
+                size_t rowCount = recordset.rowCount();
+                for( size_t rowIndex = 0; rowIndex < rowCount; ++rowIndex )
                 {
                     value = recordset.value( 0, rowIndex );
                     vec.push_back( value.convert< std::string > () );
@@ -931,9 +931,9 @@ bool SQLiteStore::_containsIllegalCharacter( std::string const& value )
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-unsigned int SQLiteStore::GetBoostAnyVectorSize( const boost::any& value )
+size_t SQLiteStore::GetBoostAnyVectorSize( const boost::any& value )
 {
-    unsigned int size = 0;
+    size_t size = 0;
     Datum temp( 0 );
     if( temp.IsIntVector( value ) )
     {

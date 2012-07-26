@@ -32,6 +32,8 @@
  *************** <auto-copyright.rb END do not edit this line> ***************/
 #pragma once
 
+#include <Persistence/ExportConfig.h>
+
 #include <string>
 #include <boost/any.hpp>
 

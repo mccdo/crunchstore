@@ -34,6 +34,8 @@
 
 #include <Persistence/BufferBase.h>
 
+#include <Persistence/ExportConfig.h>
+
 #include <vector>
 
 namespace Persistence
@@ -42,9 +44,9 @@ namespace Persistence
 class PERSISTENCE_EXPORT NullBuffer : public BufferBase
 {
 public:
-    NullBuffer(){}
+    NullBuffer();
 
-    void Buffer( std::vector< std::string > ids, BufferBase::BufferPriority priority = BufferBase::NORMAL_PRIORITY ){}
+    virtual void Buffer( std::vector< std::string > ids, BufferBase::BufferPriority priority = BufferBase::NORMAL_PRIORITY );
 };
 
 }

@@ -1,12 +1,14 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.8)
 
-project( Persistence )
+project( crunchstore )
 
 SET( CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMakeModules" )
-SET( Poco_DIR "${PROJECT_SOURCE_DIR}/CMakeModules" )
-SET( POCO_ROOT "$ENV{POCO_INSTALL_DIR}" CACHE PATH "docstring" )
-SET( Poco_INCLUDE_DIR "${POCO_ROOT}/include" )
-SET( Poco_LIBRARY_DIR "${POCO_ROOT}/lib" )
+
+#include( FindPocoHelper )
+#PocoMenuSetup()
+#PocoFinder()
+
+FIND_PACKAGE(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoData PocoDataSQLite)
 
 # should we build in mongoDB support?
 #option(USE_MONGO "Build mongoDB adapter?" ON)
@@ -25,17 +27,15 @@ if( BOOST_ALL_DYN_LINK )
     add_definitions( -DBOOST_ALL_DYN_LINK )
 endif()
 
-FIND_PACKAGE(Poco COMPONENTS SQLite)
-
 set(MONGOCLIENT_PATH "$ENV{MONGOCLIENT_INSTALL_DIR}" CACHE PATH "docstring")
 
 INCLUDE_DIRECTORIES( 
     ${Boost_INCLUDE_DIRS}
     ${MONGOCLIENT_PATH}/include
-    ${Poco_INCLUDE_DIR}
+    ${POCO_INCLUDE_DIR}
 )
 
-LINK_DIRECTORIES(${Poco_LIBRARY_DIR}/lib)
+#LINK_DIRECTORIES(${Poco_LIBRARY_DIR}/lib)
 
 ################################################################################
 # Platform specific definitions

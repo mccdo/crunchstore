@@ -40,9 +40,11 @@
 #include <Persistence/NullCache.h>
 #include <Persistence/DataAbstractionLayer.h>
 
+#ifndef USE_MONGODB
 #include <Persistence/SQLiteStore.h>
+#else
 #include <Persistence/MongoStore.h>
-
+#endif
 //#define USE_PROPERTYSETS
 #ifdef USE_PROPERTYSETS
 #include "PropertySet.h"
@@ -141,16 +143,18 @@ int main(int argc, char *argv[])
     manager.SetCache( cache );
     manager.SetBuffer( buffer );
 
+#ifndef USE_MONGODB
     // Add an SQLite store
-//    DataAbstractionLayerPtr sqstore( new SQLiteStore );
-//    static_cast<SQLiteStore*>(sqstore.get())->SetStorePath( "/tmp/DALTest.db" );
-//    manager.AttachStore( sqstore, Store::WORKINGSTORE_ROLE );
-
+    DataAbstractionLayerPtr sqstore( new SQLiteStore );
+    static_cast<SQLiteStore*>(sqstore.get())->SetStorePath( "/tmp/DALTest.db" );
+    manager.AttachStore( sqstore, Store::WORKINGSTORE_ROLE );
+#else
     // Add a mongoDB store
     DataAbstractionLayerPtr mongostore( new MongoStore );
     static_cast<MongoStore*>(mongostore.get())->SetStorePath("localhost");
     //manager.AttachStore( mongostore, Store::BACKINGSTORE_ROLE );
     manager.AttachStore( mongostore, Store::WORKINGSTORE_ROLE );
+#endif
 
  #ifdef USE_PROPERTYSETS
     // This works for any type of store connected as WORKING_ROLE
@@ -262,7 +266,7 @@ int main(int argc, char *argv[])
     cout << "\t" << bstr << endl;
 
     // Try out MapReduce functionality
-#if 1
+#ifdef USE_MONGODB
     // Drop all records with typename MRIN and MROUT
     manager.Drop( "MRIN" );
     manager.Drop( "MROUT" );

@@ -36,6 +36,8 @@
 #include <Persistence/Persistable.h>
 #include <Persistence/SearchCriterion.h>
 
+#include <Persistence/ExportConfig.h>
+
 namespace Persistence
 {
 
