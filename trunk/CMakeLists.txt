@@ -22,16 +22,13 @@ set(Boost_USE_STATIC_RUNTIME    OFF)
 
 FIND_PACKAGE(Boost 1.44.0 REQUIRED COMPONENTS system)
 
-option( BOOST_ALL_DYN_LINK "If set, use Boost dynamic libraries (boost_*); otherwise static (libboost_*)." OFF )
-if( BOOST_ALL_DYN_LINK )
-    add_definitions( -DBOOST_ALL_DYN_LINK )
-endif()
+find_package( MongoDB )
 
-set(MONGOCLIENT_PATH "$ENV{MONGOCLIENT_INSTALL_DIR}" CACHE PATH "docstring")
+#set(MONGOCLIENT_PATH "$ENV{MONGOCLIENT_INSTALL_DIR}" CACHE PATH "docstring")
 
 INCLUDE_DIRECTORIES( 
     ${Boost_INCLUDE_DIRS}
-    ${MONGOCLIENT_PATH}/include
+    #${MONGOCLIENT_PATH}/include
     ${POCO_INCLUDE_DIR}
 )
 
