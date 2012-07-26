@@ -1,16 +1,14 @@
-set(MONGO_DRIVER_LIBS
-    -L${MONGOCLIENT_PATH}/lib
-    mongoclient
-    )
+#set(MONGO_DRIVER_LIBS
+#    -L${MONGOCLIENT_PATH}/lib
+#    mongoclient
+#    )
     
 #Lets us address our internal includes as <Persistence/foo.h>
 include_directories(
         ${CMAKE_SOURCE_DIR}/src
     )
 
-#FILE( GLOB srcs "*.cxx" )
 set( srcs main.cxx )
-#FILE( GLOB hdrs "*.h" )
 
 SET(TARGET_SRC ${srcs})
 #SET(PUBLIC_HEADERS ${hdrs})

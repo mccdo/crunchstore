@@ -117,7 +117,7 @@ private:
     /// Helper function to determine whether a given TableName exists in the db.
     bool _tableExists( Poco::Data::Session& session, const std::string& TableName );
 
-    unsigned int GetBoostAnyVectorSize( const boost::any& value );
+    size_t GetBoostAnyVectorSize( const boost::any& value );
 
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
