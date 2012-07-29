@@ -7,7 +7,7 @@
 @PACKAGE_INIT@
 
 # These are IMPORTED targets created by crunchstoreLibraryDepends.cmake
-set(crunchstore_LIBRARIES "eventmanager" )
+set(crunchstore_LIBRARIES "Persistence" )
 set(crunchstore_EXECUTABLE test)
 
 # Compute paths
