@@ -1,0 +1,25 @@
+#
+# This module is provided as crunchstore_USE_FILE by crunchstoreConfig.cmake.  It can
+# be INCLUDEd in a project to load the needed compiler and linker
+# settings to use crunchstore.
+#
+
+IF(NOT crunchstore_USE_FILE_INCLUDED)
+  SET(crunchstore_USE_FILE_INCLUDED 1)
+
+  # Update CMAKE_MODULE_PATH so includes work.
+  #SET (CMAKE_MODULE_PATH
+  #  ${CMAKE_MODULE_PATH}
+  #  ${crunchstore_CMAKE_DIR})
+
+  # Add compiler flags needed to use crunchstore.
+  #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${crunchstore_REQUIRED_C_FLAGS}")
+  #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${crunchstore_REQUIRED_CXX_FLAGS}")
+  #SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${crunchstore_REQUIRED_EXE_LINKER_FLAGS}")
+  #SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${crunchstore_REQUIRED_SHARED_LINKER_FLAGS}")
+  #SET(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${crunchstore_REQUIRED_MODULE_LINKER_FLAGS}")
+
+  # Add include directories needed to use crunchstore.
+  INCLUDE_DIRECTORIES(${crunchstore_INCLUDE_DIRS})
+
+ENDIF(NOT crunchstore_USE_FILE_INCLUDED)

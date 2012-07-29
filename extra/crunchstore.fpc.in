@@ -1,0 +1,15 @@
+prefix=${fp_file_cwd}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: crunchstore
+Description: crunchstore release pre-compiled for VES
+Provides: crunchstore
+Requires:
+Version: @crunchstore_VERSION@
+Libs: @crunchstore_FPC_LIBRARIES@
+Cflags: @crunchstore_FPC_INCLUDES@
+Arch: noarch
+
+
