@@ -39,6 +39,9 @@ ELSE()
     SET(INSTALL_ARCHIVEDIR lib${LIB_POSTFIX})
 ENDIF()
 
+set_target_properties( ${TARGET_NAME} PROPERTIES VERSION ${crunchstore_VERSION} )
+set_target_properties( ${TARGET_NAME} PROPERTIES SOVERSION ${crunchstore_VERSION} )
+set_target_properties( ${TARGET_NAME} PROPERTIES PROJECT_LABEL "Lib ${TARGET_NAME}" )
 
 INSTALL(
         TARGETS ${TARGET_NAME}
