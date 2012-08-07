@@ -14,6 +14,7 @@ set(crunchstore_VERSION ${crunchstore_MAJOR_VERSION}.${crunchstore_MINOR_VERSION
 #PocoMenuSetup()
 #PocoFinder()
 
+set( POCO_ROOT "Please specify" CACHE PATH "Root directory where POCO is installed" )
 FIND_PACKAGE(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoData PocoDataSQLite)
 
 # should we build in mongoDB support?
@@ -26,6 +27,7 @@ set(Boost_USE_STATIC_LIBS       OFF)
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 
+set( BOOST_ROOT "Please specify" CACHE PATH "Root directory where Boost is installed" )
 FIND_PACKAGE(Boost 1.44.0 REQUIRED COMPONENTS system)
 
 find_package( MongoDB )
