@@ -58,26 +58,13 @@ IF(WIN32)
     ENDIF(MSVC)
 ENDIF (WIN32)
 
-if(CMAKE_COMPILER_IS_GNU AND NOT WIN32 AND NOT APPLE)
+if(CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32 AND NOT APPLE)
     include(GNUInstallDirs)
-endif(CMAKE_COMPILER_IS_GNU AND NOT WIN32 AND NOT APPLE)
+endif(CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32 AND NOT APPLE)
 
 if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
   set(CMAKE_INSTALL_LIBDIR lib)
 endif(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-
-################################################################################
-# Create lib directory if required
-
-#IF("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
-#   FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-#ENDIF("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
-
-################################################################################
-
-#SET(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
-#MAKE_DIRECTORY(${OUTPUT_LIBDIR})
-#SET(LIBRARY_OUTPUT_PATH ${OUTPUT_LIBDIR})
 
 add_subdirectory(src)
 
@@ -166,7 +153,7 @@ if(WIN32)
     set(crunchstore_FPC_INCLUDES "/I\"\${includedir}\"")
 else(WIN32)
     set(crunchstore_FPC_INCLUDES "-I\${includedir}")
-    set(crunchstore_FPC_LIBRARIES "-L\${libdir} -l Persistence")
+    set(crunchstore_FPC_LIBRARIES "-L\${libdir} -lPersistence")
 endif(WIN32)
 
 configure_file(extra/crunchstore.fpc.in
