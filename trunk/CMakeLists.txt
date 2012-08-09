@@ -58,28 +58,26 @@ IF(WIN32)
     ENDIF(MSVC)
 ENDIF (WIN32)
 
-IF(UNIX AND NOT WIN32 AND NOT APPLE)
-  IF(CMAKE_SIZEOF_VOID_P MATCHES "8")
-      SET(LIB_POSTFIX "64" CACHE STRING "suffix for 32/64 dir placement")
-      MARK_AS_ADVANCED(LIB_POSTFIX)
-  ENDIF()
-ENDIF()
-IF(NOT DEFINED LIB_POSTFIX)
-    SET(LIB_POSTFIX "")
-ENDIF()
+if(CMAKE_COMPILER_IS_GNU AND NOT WIN32 AND NOT APPLE)
+    include(GNUInstallDirs)
+endif(CMAKE_COMPILER_IS_GNU AND NOT WIN32 AND NOT APPLE)
+
+if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+  set(CMAKE_INSTALL_LIBDIR lib)
+endif(NOT DEFINED CMAKE_INSTALL_LIBDIR)
 
 ################################################################################
 # Create lib directory if required
 
-IF("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
-   FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-ENDIF("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+#IF("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+#   FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+#ENDIF("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 
 ################################################################################
 
-SET(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
-MAKE_DIRECTORY(${OUTPUT_LIBDIR})
-SET(LIBRARY_OUTPUT_PATH ${OUTPUT_LIBDIR})
+#SET(OUTPUT_LIBDIR ${PROJECT_BINARY_DIR}/lib)
+#MAKE_DIRECTORY(${OUTPUT_LIBDIR})
+#SET(LIBRARY_OUTPUT_PATH ${OUTPUT_LIBDIR})
 
 add_subdirectory(src)
 
@@ -106,8 +104,8 @@ add_subdirectory(src)
 # for debugging if they are present
 if(MSVC)
     install(
-        DIRECTORY ${PROJECT_BINARY_DIR}/lib/\${CMAKE_INSTALL_CONFIG_NAME}/
-        DESTINATION lib
+        DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/\${CMAKE_INSTALL_CONFIG_NAME}/
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
         USE_SOURCE_PERMISSIONS
         COMPONENT Development
         FILES_MATCHING PATTERN "*.pdb"
@@ -126,7 +124,7 @@ install( FILES "extra/Findcrunchstore.cmake"
 
 # Add all targets to the build-tree export set
 export(TARGETS Persistence
-  FILE "${PROJECT_BINARY_DIR}/lib/crunchstoreLibraryDepends.cmake")
+  FILE "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreLibraryDepends.cmake")
 
 # Export the package for use from the build-tree
 # (this registers the build-tree with a global CMake-registry)
@@ -134,32 +132,32 @@ export(PACKAGE crunchstore)
 
 # Create a crunchstoreBuildTreeSettings.cmake file for the use from the build tree
 configure_file(crunchstoreBuildTreeSettings.cmake.in
-  "${PROJECT_BINARY_DIR}/lib/crunchstoreBuildTreeSettings.cmake" @ONLY)
+  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreBuildTreeSettings.cmake" @ONLY)
 
 #configure_file(crunchstoreConfig.cmake.in
-#  "${PROJECT_BINARY_DIR}/lib/crunchstoreConfig.cmake" @ONLY)
+#  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfig.cmake" @ONLY)
 configure_file(crunchstoreConfigVersion.cmake.in
-  "${PROJECT_BINARY_DIR}/lib/crunchstoreConfigVersion.cmake" @ONLY)
+  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfigVersion.cmake" @ONLY)
 configure_file(Usecrunchstore.cmake.in
-  "${PROJECT_BINARY_DIR}/lib/Usecrunchstore.cmake" @ONLY)
+  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/Usecrunchstore.cmake" @ONLY)
 
 # Install the export set for use with the install-tree
-install(EXPORT crunchstore-targets DESTINATION lib)
+install(EXPORT crunchstore-targets DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 include( CMakePackageConfigHelpers )
 # Create the crunchstoreConfig.cmake and crunchstoreConfigVersion files
-file(RELATIVE_PATH CONF_REL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+file(RELATIVE_PATH CONF_REL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
    "${CMAKE_INSTALL_PREFIX}/include")
 
 configure_package_config_file( 
-    crunchstoreConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/lib/crunchstoreConfig.cmake
-    INSTALL_DESTINATION lib
+    crunchstoreConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}
     PATH_VARS CONF_REL_INCLUDE_DIR )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/crunchstoreConfig.cmake 
-              ${CMAKE_CURRENT_BINARY_DIR}/lib/crunchstoreConfigVersion.cmake
-              ${CMAKE_CURRENT_BINARY_DIR}/lib/Usecrunchstore.cmake
-        DESTINATION lib )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfig.cmake 
+              ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfigVersion.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/Usecrunchstore.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
 #
 # Setup the fpc auto detection files
@@ -172,8 +170,8 @@ else(WIN32)
 endif(WIN32)
 
 configure_file(extra/crunchstore.fpc.in
-  "${PROJECT_BINARY_DIR}/lib/flagpoll/crunchstore.fpc" @ONLY)
+  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/flagpoll/crunchstore.fpc" @ONLY)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/lib/flagpoll/crunchstore.fpc
-        DESTINATION lib/flagpoll )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/flagpoll/crunchstore.fpc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/flagpoll )
 
