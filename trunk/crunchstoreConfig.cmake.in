@@ -14,16 +14,16 @@ set(crunchstore_EXECUTABLE test)
 # get_filename_component(crunchstore_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 if(EXISTS "${PACKAGE_PREFIX_DIR}/CMakeCache.txt")
     # In build tree
-    include("${PACKAGE_PREFIX_DIR}/lib/crunchstoreBuildTreeSettings.cmake")
+    include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/crunchstoreBuildTreeSettings.cmake")
     # Our library dependencies (contains definitions for IMPORTED targets)
-    include("${PACKAGE_PREFIX_DIR}/lib/crunchstoreLibraryDepends.cmake")
+    include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/crunchstoreLibraryDepends.cmake")
 else()
     set_and_check(crunchstore_INCLUDE_DIRS "${PACKAGE_PREFIX_DIR}/include")
     # The crunchstore targets file.
-    if(EXISTS "${PACKAGE_PREFIX_DIR}/lib/crunchstore-targets.cmake")
-        include("${PACKAGE_PREFIX_DIR}/lib/crunchstore-targets.cmake")
+    if(EXISTS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/crunchstore-targets.cmake")
+        include("${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/crunchstore-targets.cmake")
     endif()
 endif()
 
 # The location of the Usecrunchstore.cmake file.
-set(crunchstore_USE_FILE "${PACKAGE_PREFIX_DIR}/lib/Usecrunchstore.cmake")
+set(crunchstore_USE_FILE "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/Usecrunchstore.cmake")
