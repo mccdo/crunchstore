@@ -8,13 +8,9 @@ set(crunchstore_MAJOR_VERSION 0)
 set(crunchstore_MINOR_VERSION 2)
 set(crunchstore_SUB_VERSION 0)
 set(crunchstore_VERSION ${crunchstore_MAJOR_VERSION}.${crunchstore_MINOR_VERSION}.${crunchstore_SUB_VERSION})
+set(VES_PACKAGE_VERSION ${crunchstore_VERSION})
 
-
-#include( FindPocoHelper )
-#PocoMenuSetup()
-#PocoFinder()
-
-set( POCO_ROOT "Please specify" CACHE PATH "Root directory where POCO is installed" )
+set(POCO_ROOT "Please specify" CACHE PATH "Root directory where POCO is installed" )
 FIND_PACKAGE(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoData PocoDataSQLite)
 
 # should we build in mongoDB support?
@@ -58,22 +54,7 @@ IF(WIN32)
     ENDIF(MSVC)
 ENDIF (WIN32)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-    include(GNUInstallDirs)
-endif(CMAKE_COMPILER_IS_GNUCXX)
-
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  set(CMAKE_INSTALL_LIBDIR lib)
-endif(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-
-set(INSTALL_INCDIR include)
-set(INSTALL_BINDIR bin)
-set(INSTALL_ARCHIVEDIR ${CMAKE_INSTALL_LIBDIR})
-if(WIN32)
-    SET(INSTALL_LIBDIR bin)
-else(WIN32)
-    SET(INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})
-endif(WIN32)
+include(VESBinAndLibDirs)
 
 add_subdirectory(src)
 
@@ -96,64 +77,10 @@ add_subdirectory(src)
 #    add_subdirectory( doc/images )
 #endif()
 
-# On windows provide the user with the pdb files 
-# for debugging if they are present
-if(MSVC)
-    install(
-        DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/\${CMAKE_INSTALL_CONFIG_NAME}/
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        USE_SOURCE_PERMISSIONS
-        COMPONENT Development
-        FILES_MATCHING PATTERN "*.pdb"
-    )
-endif(MSVC)
+include(VESInstallPDBFiles)
 
-# Install the CMake find script for crunchstore
-install( FILES "extra/Findcrunchstore.cmake"
-    DESTINATION "share/${CMAKE_PROJECT_NAME}/extra"
-    COMPONENT Development
-)
-
-#
-# Create and install all of the auto find tools
-# =============================================
-
-# Add all targets to the build-tree export set
-export(TARGETS Persistence
-  FILE "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreLibraryDepends.cmake")
-
-# Export the package for use from the build-tree
-# (this registers the build-tree with a global CMake-registry)
-export(PACKAGE crunchstore)
-
-# Create a crunchstoreBuildTreeSettings.cmake file for the use from the build tree
-configure_file(crunchstoreBuildTreeSettings.cmake.in
-  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreBuildTreeSettings.cmake" @ONLY)
-
-#configure_file(crunchstoreConfig.cmake.in
-#  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfig.cmake" @ONLY)
-configure_file(crunchstoreConfigVersion.cmake.in
-  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfigVersion.cmake" @ONLY)
-configure_file(Usecrunchstore.cmake.in
-  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/Usecrunchstore.cmake" @ONLY)
-
-# Install the export set for use with the install-tree
-install(EXPORT crunchstore-targets DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-include( CMakePackageConfigHelpers )
-# Create the crunchstoreConfig.cmake and crunchstoreConfigVersion files
-file(RELATIVE_PATH CONF_REL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
-   "${CMAKE_INSTALL_PREFIX}/include")
-
-configure_package_config_file( 
-    crunchstoreConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfig.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PATH_VARS CONF_REL_INCLUDE_DIR CMAKE_INSTALL_LIBDIR)
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfig.cmake 
-              ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/crunchstoreConfigVersion.cmake
-              ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/Usecrunchstore.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR} )
+set(VES_EXPORT_LIBRARY_TARGETS Persistence)
+set(VES_CONFIGURE_VARS CMAKE_INSTALL_LIBDIR)
 
 #
 # Setup the fpc auto detection files
@@ -165,9 +92,5 @@ else(WIN32)
     set(crunchstore_FPC_LIBRARIES "-L\${libdir} -lPersistence")
 endif(WIN32)
 
-configure_file(extra/crunchstore.fpc.in
-  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/flagpoll/crunchstore.fpc" @ONLY)
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/flagpoll/crunchstore.fpc
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/flagpoll )
+include(VESInstallAutoDiscoveryTools)
 
