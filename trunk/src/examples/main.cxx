@@ -33,17 +33,17 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include <Persistence/Persistable.h>
-#include <Persistence/Datum.h>
-#include <Persistence/DataManager.h>
-#include <Persistence/NullBuffer.h>
-#include <Persistence/NullCache.h>
-#include <Persistence/DataAbstractionLayer.h>
+#include <crunchstore/Persistable.h>
+#include <crunchstore/Datum.h>
+#include <crunchstore/DataManager.h>
+#include <crunchstore/NullBuffer.h>
+#include <crunchstore/NullCache.h>
+#include <crunchstore/DataAbstractionLayer.h>
 
 #ifndef USE_MONGODB
-#include <Persistence/SQLiteStore.h>
+#include <crunchstore/SQLiteStore.h>
 #else
-#include <Persistence/MongoStore.h>
+#include <crunchstore/MongoStore.h>
 #endif
 //#define USE_PROPERTYSETS
 #ifdef USE_PROPERTYSETS
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 {
 
     using namespace std;
-    using namespace Persistence;
+    using namespace crunchstore;
 
     Persistable p;
     p.AddDatum( "Test", 1.2 );

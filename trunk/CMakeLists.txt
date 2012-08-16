@@ -79,17 +79,17 @@ add_subdirectory(src)
 
 include(VESInstallPDBFiles)
 
-set(VES_EXPORT_LIBRARY_TARGETS Persistence)
+set(VES_EXPORT_LIBRARY_TARGETS crunchstore)
 set(VES_CONFIGURE_VARS CMAKE_INSTALL_LIBDIR)
 
 #
 # Setup the fpc auto detection files
 if(WIN32)
-    set(crunchstore_FPC_LIBRARIES "/libpath:\"\${libdir}\" Persistence.lib")
+    set(crunchstore_FPC_LIBRARIES "/libpath:\"\${libdir}\" crunchstore.lib")
     set(crunchstore_FPC_INCLUDES "/I\"\${includedir}\"")
 else(WIN32)
     set(crunchstore_FPC_INCLUDES "-I\${includedir}")
-    set(crunchstore_FPC_LIBRARIES "-L\${libdir} -lPersistence")
+    set(crunchstore_FPC_LIBRARIES "-L\${libdir} -lcrunchstore")
 endif(WIN32)
 
 include(VESInstallAutoDiscoveryTools)
