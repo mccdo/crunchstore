@@ -3,7 +3,7 @@
 #    mongoclient
 #    )
     
-#Lets us address our internal includes as <Persistence/foo.h>
+#Lets us address our internal includes as <crunchstore/foo.h>
 include_directories(
         ${CMAKE_SOURCE_DIR}/src
     )
@@ -13,9 +13,9 @@ set( srcs main.cxx )
 SET(TARGET_SRC ${srcs})
 #SET(PUBLIC_HEADERS ${hdrs})
 
-SET(TARGET_NAME PersistenceTest)
+SET(TARGET_NAME crunchstoreTest)
 ADD_EXECUTABLE(${TARGET_NAME} ${TARGET_SRC})
-TARGET_LINK_LIBRARIES(${TARGET_NAME} Persistence ${MONGO_DRIVER_LIBS} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(${TARGET_NAME} crunchstore ${MONGO_DRIVER_LIBS} ${Boost_LIBRARIES})
 
 
 #SET(INSTALL_INCDIR include)
