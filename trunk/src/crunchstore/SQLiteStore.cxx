@@ -798,9 +798,10 @@ void SQLiteStore::Search( const std::string& typeName,
     // For now, we only treat a single keyvalue criterion. More advanced processing
     // can be added later.
     std::string wherePredicate;
+    SearchCriterion sc;
     if( !criteria.empty() )
     {
-        SearchCriterion sc( criteria.at(0) );
+        sc = criteria.at(0);
         wherePredicate = sc.m_key;
         wherePredicate += " ";
         wherePredicate += sc.m_comparison;
@@ -811,12 +812,15 @@ void SQLiteStore::Search( const std::string& typeName,
     statement << "SELECT " << returnField << " FROM \"" << typeName;
     if( !wherePredicate.empty() )
     {
-        statement << "\" WHERE " << wherePredicate;
+        statement << "\" WHERE " << wherePredicate << " :0";
     }
-    statement<< " :0", Poco::Data::into( results );
+    statement, Poco::Data::into( results );
 
     BindableAnyWrapper bindable;
-    bindable.BindValue( &statement, sc.m_value );
+    if( !wherePredicate.empty() )
+    {
+        bindable.BindValue( &statement, sc.m_value );
+    }
     statement.execute();
 }
 ////////////////////////////////////////////////////////////////////////////////
