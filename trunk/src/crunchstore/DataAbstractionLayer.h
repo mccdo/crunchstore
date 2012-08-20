@@ -70,7 +70,9 @@ public:
     virtual void GetIDsForTypename( const std::string& typeName,
                                     std::vector< std::string >& resultIDs );
 
-    /// Gets all available IDs for a given type where criteria are met.
+    /// Gets the value of @c returnField for a given type where criteria are
+    /// met. If @c criteria is an empty vector< SearchCriterion >, the value
+    /// for @c returnField of every entry of @c typeName is returned.
     virtual void Search( const std::string& typeName,
                          std::vector< SearchCriterion >& criteria,
                          const std::string& returnField,

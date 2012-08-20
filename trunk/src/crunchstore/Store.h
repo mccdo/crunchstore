@@ -61,6 +61,20 @@ public:
     virtual void Attach();
     virtual void Detach();
 
+    /**
+     * Every type of store has some concept of a path or location. For local
+     * file-based stores @c path is literally the path to a file. For
+     * server-based stores, @c is some sort of network connection string.
+     */
+    virtual void SetStorePath( const std::string& path );
+
+    /**
+     * Checks whether table with @c typeName exists in the current database.
+     * @param typeName Name of table to check for
+     * @return @c true if table exists, @c false otherwise.
+     */
+    virutal bool HasTypename( const std::string& typeName );
+
     /// Override from DataAbstractionLayer. This method must not be overridden
     /// by derived classes, which should instead override SaveImpl.
     void Save( const Persistable& persistable, Role role = DEFAULT_ROLE  );

@@ -75,6 +75,7 @@ void MongoStore::Attach()
 bool MongoStore::HasTypename( const std::string& typeName )
 {
     bool exists = false;
+    // FIXME: This actually needs to check for the existence of the typename...
     return exists;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -306,99 +307,112 @@ void MongoStore::Search( const std::string& typeName,
                          const std::string& returnField,
                          std::vector< std::string >& results )
 {
+    if( !HasTypename( typeName ) )
+    {
+        return;
+    }
+
     std::string dbNamespace = "ves.";
     dbNamespace += typeName;
 
     // Very limited -- assumes a single criterion of form key, comparison, value
-    SearchCriterion sc( criteria.at( 0 ) );
-    std::string key = sc.m_key;
-    std::string comparison = sc.m_comparison;
-    boost::any value = sc.m_value;
-
-    mongo::Labeler::Label cmp( mongo::GT );
-    if( comparison == ">")
-    {
-        cmp = mongo::GT;
-    }
-    else if( comparison == "<" )
-    {
-        cmp = mongo::LT;
-    }
-    else if( comparison == ">=" )
-    {
-        cmp = mongo::GTE;
-    }
-    else if( comparison == "<=" )
-    {
-        cmp = mongo::LTE;
-    }
-    else if( comparison == "!=" )
-    {
-        cmp = mongo::NE;
-    }
-
-    Datum tester(0);
     std::auto_ptr<mongo::DBClientCursor> cursor;
+    if( !criteria.empty() )
+    {
+        SearchCriterion sc( criteria.at( 0 ) );
+        std::string key = sc.m_key;
+        std::string comparison = sc.m_comparison;
+        boost::any value = sc.m_value;
 
-    if( tester.IsBool( value ) )
-    {
-        bool v = boost::any_cast< bool >( value );
-        if( comparison == "=")
+        mongo::Labeler::Label cmp( mongo::GT );
+        if( comparison == ">")
         {
-            cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
+            cmp = mongo::GT;
         }
-        else
+        else if( comparison == "<" )
         {
-            cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
+            cmp = mongo::LT;
+        }
+        else if( comparison == ">=" )
+        {
+            cmp = mongo::GTE;
+        }
+        else if( comparison == "<=" )
+        {
+            cmp = mongo::LTE;
+        }
+        else if( comparison == "!=" )
+        {
+            cmp = mongo::NE;
+        }
+
+        Datum tester(0);
+
+        if( tester.IsBool( value ) )
+        {
+            bool v = boost::any_cast< bool >( value );
+            if( comparison == "=")
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
+            }
+            else
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
+            }
+        }
+        else if( tester.IsDouble( value ) )
+        {
+            double v = boost::any_cast< double >( value );
+            if( comparison == "=")
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
+            }
+            else
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
+            }
+        }
+        else if( tester.IsFloat( value ) )
+        {
+            float v = boost::any_cast< float >( value );
+            if( comparison == "=")
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
+            }
+            else
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
+            }
+        }
+        else if( tester.IsInt( value ) )
+        {
+            int v = boost::any_cast< int >( value );
+            if( comparison == "=")
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
+            }
+            else
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
+            }
+        }
+        else if( tester.IsString( value ) )
+        {
+            std::string v = boost::any_cast< std::string >( value );
+            if( comparison == "=")
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
+            }
+            else
+            {
+                cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
+            }
         }
     }
-    else if( tester.IsDouble( value ) )
+    else
     {
-        double v = boost::any_cast< double >( value );
-        if( comparison == "=")
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
-        }
-        else
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
-        }
-    }
-    else if( tester.IsFloat( value ) )
-    {
-        float v = boost::any_cast< float >( value );
-        if( comparison == "=")
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
-        }
-        else
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
-        }
-    }
-    else if( tester.IsInt( value ) )
-    {
-        int v = boost::any_cast< int >( value );
-        if( comparison == "=")
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
-        }
-        else
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
-        }
-    }
-    else if( tester.IsString( value ) )
-    {
-        std::string v = boost::any_cast< std::string >( value );
-        if( comparison == "=")
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << v  ) );
-        }
-        else
-        {
-            cursor = m_connection->query( dbNamespace, QUERY( key << cmp << v  ) );
-        }
+        //criteria was empty; return all objects in the namespace
+        cursor = m_connection->query( dbNamespace, mongo::BSONObj() );
     }
 
     std::string field = returnField;
