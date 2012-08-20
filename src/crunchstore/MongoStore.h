@@ -44,14 +44,14 @@ public:
     MongoStore();
     ~MongoStore();
 
-    void SetStorePath( const std::string& path );
+    virtual void SetStorePath( const std::string& path );
 
     /**
      * Checks whether table with @c typeName exists in the current database.
      * @param typeName Name of table to check for
      * @return @c true if table exists, @c false otherwise.
      */
-    bool HasTypename( const std::string& typeName );
+    virutal bool HasTypename( const std::string& typeName );
 
     virtual void Attach();
 
