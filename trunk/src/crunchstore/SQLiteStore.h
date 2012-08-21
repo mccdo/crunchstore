@@ -54,7 +54,7 @@ public:
      * @param typeName Name of table to check for
      * @return @c true if table exists, @c false otherwise.
      */
-    bool HasTypename( const std::string& typeName );
+    bool HasTypeName( const std::string& typeName );
 
     virtual void Attach();
 
