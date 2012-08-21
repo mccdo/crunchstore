@@ -173,6 +173,7 @@ DatumPtr Persistable::GetDatum( std::string const& datumName ) const
     {
         std::string error( "Persistable::GetDatum: No datum named " );
         error += datumName;
+        error += " in Persistable named " + m_typename;
         throw std::runtime_error( error );
     }
 }
