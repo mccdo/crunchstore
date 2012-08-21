@@ -72,7 +72,7 @@ void MongoStore::Attach()
     m_connection->connect( m_path );
 }
 ////////////////////////////////////////////////////////////////////////////////
-bool MongoStore::HasTypename( const std::string& typeName )
+bool MongoStore::HasTypeName( const std::string& typeName )
 {
     bool exists = false;
     std::string dbnamespace( "ves." );

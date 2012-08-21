@@ -47,7 +47,8 @@ public:
     DataAbstractionLayer();
     virtual ~DataAbstractionLayer();
 
-    /// Persistables can be used in two roles:
+    /// Persistables can be used in four roles. This is a binary flag, so
+    /// DEFAULT_ROLE = WORKING_ROLE + BACKING_ROLE
     enum Role{ WORKING_ROLE = 1,
                BACKING_ROLE = 2,
                DEFAULT_ROLE = 3,

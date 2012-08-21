@@ -74,7 +74,7 @@ public:
      * @param typeName Name of table to check for
      * @return @c true if table exists, @c false otherwise.
      */
-    virtual bool HasTypename( const std::string& typeName );
+    virtual bool HasTypeName( const std::string& typeName );
 
     /// Override from DataAbstractionLayer. This method must not be overridden
     /// by derived classes, which should instead override SaveImpl.

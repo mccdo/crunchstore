@@ -86,7 +86,7 @@ void SQLiteStore::Attach()
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-bool SQLiteStore::HasTypename( const std::string& typeName )
+bool SQLiteStore::HasTypeName( const std::string& typeName )
 {
     bool exists = false;
     Poco::Data::Session session( m_pool->get() );

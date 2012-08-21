@@ -93,7 +93,7 @@ void Store::SetStorePath( const std::string&  )
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-bool Store::HasTypename( const std::string&  )
+bool Store::HasTypeName( const std::string&  )
 {
 
 }
