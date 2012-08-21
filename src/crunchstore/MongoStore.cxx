@@ -75,7 +75,15 @@ void MongoStore::Attach()
 bool MongoStore::HasTypename( const std::string& typeName )
 {
     bool exists = false;
-    // FIXME: This actually needs to check for the existence of the typename...
+    std::string dbnamespace( "ves." );
+    dbnamespace += typeName;
+
+    mongo::BSONObj obj = m_connection->findOne( dbnamespace, QUERY() );
+    if( !obj.isEmpty() )
+    {
+        exists = true;
+    }
+
     return exists;
 }
 ////////////////////////////////////////////////////////////////////////////////

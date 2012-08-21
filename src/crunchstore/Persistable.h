@@ -118,7 +118,7 @@ public:
     virtual DatumPtr GetDatum( std::string const& datumName ) const;
 
     /// Sets the main value of the datum identified by datumName to value.
-    virtual void SetDatumValue( std::string const& datumName,
+    virtual bool SetDatumValue( std::string const& datumName,
                                 boost::any value );
 
     /// Returns the main value of the datum identified by datumName, converted
