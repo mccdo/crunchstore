@@ -115,6 +115,7 @@ public:
                               DatumPtr datum );
 
     /// Returns a pointer to the datum identified by datumName
+    /// @throws std::runtime_error if datum does not exist
     virtual DatumPtr GetDatum( std::string const& datumName ) const;
 
     /// Sets the main value of the datum identified by datumName to value.
@@ -123,6 +124,7 @@ public:
 
     /// Returns the main value of the datum identified by datumName, converted
     /// to type T. Example: persist.GetDatumValue< double >( "MyDouble" );
+    /// @throws std::runtime_error if datum does not exist
     template <typename T>
             T GetDatumValue( std::string const& datumName ) const
     {
