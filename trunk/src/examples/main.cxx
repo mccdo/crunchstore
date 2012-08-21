@@ -145,8 +145,10 @@ int main(int argc, char *argv[])
 
 #ifndef USE_MONGODB
     // Add an SQLite store
-    DataAbstractionLayerPtr sqstore( new SQLiteStore );
-    static_cast<SQLiteStore*>(sqstore.get())->SetStorePath( "/tmp/DALTest.db" );
+    //DataAbstractionLayerPtr sqstore( new SQLiteStore );
+    //static_cast<SQLiteStore*>(sqstore.get())->SetStorePath( "/tmp/DALTest.db" );
+    SQLiteStorePtr sqstore( new SQLiteStore );
+    sqstore->SetStorePath( "/tmp/DALTest.db" );
     manager.AttachStore( sqstore, Store::WORKINGSTORE_ROLE );
 #else
     // Add a mongoDB store

@@ -177,13 +177,17 @@ DatumPtr Persistable::GetDatum( std::string const& datumName ) const
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Persistable::SetDatumValue( std::string const& datumName,
+bool Persistable::SetDatumValue( std::string const& datumName,
                                  boost::any value )
 {
     DataMap::const_iterator iterator = m_dataMap.find( datumName );
     if( iterator != m_dataMap.end() )
     {
-        ( *iterator ).second->SetValue( value );
+        return ( *iterator ).second->SetValue( value );
+    }
+    else
+    {
+        return false;
     }
 }
 ////////////////////////////////////////////////////////////////////////////////

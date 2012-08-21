@@ -33,6 +33,7 @@
 #pragma once
 
 #include <crunchstore/Store.h>
+#include <crunchstore/SQLiteStorePtr.h>
 #include <Poco/Data/SQLite/SQLite.h>
 #include <Poco/Data/Session.h>
 #include <Poco/Data/SessionPool.h>

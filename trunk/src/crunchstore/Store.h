@@ -33,6 +33,7 @@
 #pragma once
 
 #include <crunchstore/DataAbstractionLayer.h>
+#include <crunchstore/StorePtr.h>
 
 namespace crunchstore
 {
