@@ -261,11 +261,13 @@ void Multiplexer::DetachStore( DataAbstractionLayerPtr store )
         {
             static_cast< Store* >(it->first.get())->Detach();
             m_stores.erase( it );
-            break;
+            return;
         }
         ++it;
     }
-    throw "DetachStore: unable to find store.";
+
+    // Do we want to throw if the passed store wasn't found?
+    //throw "DetachStore: unable to find store.";
 }
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::Drop( const std::string& typeName, Role role  )
