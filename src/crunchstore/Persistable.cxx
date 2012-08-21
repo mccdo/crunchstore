@@ -171,10 +171,19 @@ DatumPtr Persistable::GetDatum( std::string const& datumName ) const
     }
     else
     {
+        // Unsure whether it's preferable to throw an exception here or just
+        // return an empty DatumPtr. Pro/Con for exception:
+        // Pros: *User never has to test whether the returned DatumPtr is empty
+        //       *Compound operations on a returned DatumPtr will fail before
+        //        the pointer is accessed, allowing for the possiblity of
+        //        graceful failure rather than a crash.
+        // Cons: *User either has to test for existence of Datum before calling
+        //        GetDatum or has to wrap access in try/catch block.
         std::string error( "Persistable::GetDatum: No datum named " );
         error += datumName;
         error += " in Persistable named " + m_typename;
         throw std::runtime_error( error );
+        //return DatumPtr();
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
