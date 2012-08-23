@@ -795,6 +795,11 @@ void SQLiteStore::Search( const std::string& typeName,
                           const std::string& returnField,
                           std::vector< std::string >& results )
 {
+    if( !HasTypeName( typeName ) )
+    {
+        //std::cout << "SQLiteStore::Search: Error: No table named " << typeName << std::endl << std::flush;
+        return;
+    }
     // For now, we only treat a single keyvalue criterion. More advanced processing
     // can be added later.
     std::string wherePredicate;
@@ -809,10 +814,10 @@ void SQLiteStore::Search( const std::string& typeName,
 
     Poco::Data::Session session( GetPool()->get() );
     Poco::Data::Statement statement( session );
-    statement << "SELECT " << returnField << " FROM \"" << typeName;
+    statement << "SELECT " << returnField << " FROM \"" << typeName << "\"";
     if( !wherePredicate.empty() )
     {
-        statement << "\" WHERE " << wherePredicate << " :0";
+        statement << " WHERE " << wherePredicate << " :0";
     }
     statement, Poco::Data::into( results );
 
@@ -821,6 +826,8 @@ void SQLiteStore::Search( const std::string& typeName,
     {
         bindable.BindValue( &statement, sc.m_value );
     }
+
+    //std::cout << "SQLiteStore::Search query: " << statement.toString() << std::endl << std::flush;
     statement.execute();
 }
 ////////////////////////////////////////////////////////////////////////////////
