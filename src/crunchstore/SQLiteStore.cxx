@@ -67,7 +67,15 @@ Poco::Data::SessionPool* SQLiteStore::GetPool()
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::SetStorePath( const std::string& path )
 {
-    //std::cout << "SQLiteStore::SetStorePath: path = " << path << std::endl << std::flush;
+    //std::cout << "SQLiteStore::SetStorePath: path = "
+    //          << path << std::endl << std::flush;
+    m_path = path;
+}
+////////////////////////////////////////////////////////////////////////////////
+void SQLiteStore::Attach()
+{
+    //std::cout << "SQLiteStore::Attach: using path "
+    //          << m_path << std::endl << std::flush;
     if( m_pool )
     {
         delete m_pool;
@@ -76,18 +84,12 @@ void SQLiteStore::SetStorePath( const std::string& path )
     }
 
     Poco::Data::SQLite::Connector::registerConnector();
-    m_pool = new Poco::Data::SessionPool( "SQLite", path, 1, 32, 10 );
-    m_path = path;
-    //std::cout << "SQLiteStore::SetStorePath: path set. " << std::endl << std::flush;
-}
-////////////////////////////////////////////////////////////////////////////////
-void SQLiteStore::Attach()
-{
-
+    m_pool = new Poco::Data::SessionPool( "SQLite", m_path, 1, 32, 10 );
 }
 ////////////////////////////////////////////////////////////////////////////////
 bool SQLiteStore::HasTypeName( const std::string& typeName )
 {
+    //std::cout << "SQLiteStore::HasTypeName" << std::endl << std::flush;
     bool exists = false;
     Poco::Data::Session session( m_pool->get() );
     try
@@ -106,6 +108,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Detach()
 {
+    //std::cout << "SQLiteStore::Detach" << std::endl << std::flush;
     if( m_pool )
     {
         //std::cout << "Number of idle Poco::Sessions " << m_pool->idle()
@@ -122,10 +125,6 @@ void SQLiteStore::Detach()
     {
         ;
     }
-
-    //Remove working db file
-    // TODO: this functionality should move elsewhere into VES codebase
-    //boost::filesystem::remove( m_path );
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::SaveImpl( const Persistable& persistable,
@@ -656,10 +655,13 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
 
             if( !bValue.empty() )
             {
+                //std::cout << "SQLiteStore::LoadImpl: Setting value for " << name << std::endl << std::flush;
                 persistable.SetDatumValue( name, bValue );
             }
         }
     }
+
+    //std::cout << "SQLiteStore::LoadImpl: vec part" << std::endl << std::flush;
 
     // Look through PropertySet for vectorized data types. These will not have been
     // stored in the main table and must be looked for elsewhere in the database.
@@ -732,6 +734,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
         ++it;
     }
 
+    //std::cout << "SQLiteStore::LoadImpl done." << std::endl << std::flush;
+
     // If we have just loaded a dataset, the change accumulator will be full
     // of changes and it will appear as though the set is dirty and needs to
     // be written back to the database. To prevent an unnecessary write, we
@@ -746,6 +750,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Remove( Persistable& persistable )
 {
+    //std::cout << "SQLiteStore::Remove" << std::endl << std::flush;
     std::string typeName = persistable.GetTypeName();
     if( HasIDForTypename( persistable.GetUUID(), persistable.GetTypeName() ) )
     {
@@ -759,6 +764,14 @@ void SQLiteStore::Remove( Persistable& persistable )
 ////////////////////////////////////////////////////////////////////////////////
 bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName )
 {
+    //std::cout << "SQLiteStore::HasIDForTypename" << std::endl << std::flush;
+
+    if( !HasTypeName( typeName ) )
+    {
+        //std::cout << "Don't even have typename " << typeName << std::endl << std::flush;
+        return false;
+    }
+
     // This query will return a non-empty string iff the record exists
     std::string idTest;
     std::string idString = boost::lexical_cast< std::string >( id );
@@ -783,6 +796,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id, const std::str
 void SQLiteStore::GetIDsForTypename( const std::string& typeName,
                                 std::vector< std::string >& resultIDs )
 {
+    //std::cout << "SQLiteStore::GetIDsForTypename" << std::endl << std::flush;
     Poco::Data::Session session( GetPool()->get() );
     Poco::Data::Statement statement( session );
 
@@ -795,6 +809,7 @@ void SQLiteStore::Search( const std::string& typeName,
                           const std::string& returnField,
                           std::vector< std::string >& results )
 {
+    //std::cout << "SQLiteStore::Search" << std::endl << std::flush;
     if( !HasTypeName( typeName ) )
     {
         //std::cout << "SQLiteStore::Search: Error: No table named " << typeName << std::endl << std::flush;
@@ -898,6 +913,13 @@ std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistabl
             dataType = "UNKNOWN";
         }
 
+        // One more test... if we have an empty boost::any, don't write it.
+        if( (dataType != "UNKNOWN") && (property->GetValue().empty()) )
+        {
+            std::cout << "Empty any looked like: " << dataType << std::endl;
+            dataType = "UNKNOWN";
+        }
+
         if( _containsIllegalCharacter( *it ) )
         {
             // This will cause the property to be skipped in db writes:
@@ -922,6 +944,7 @@ std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistabl
         }
         else
         {
+            //std::cout << "Datum named " << (*it) << " will not be written" << std::endl << std::flush;
             ++it;
         }
     }
@@ -932,6 +955,8 @@ std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistabl
     {
         result.erase( --result.end() );
     }
+
+    //std::cout << result << std::endl << std::flush;
 
     return result;
 }
@@ -976,6 +1001,7 @@ size_t SQLiteStore::GetBoostAnyVectorSize( const boost::any& value )
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Drop( const std::string& typeName, Role role )
 {
+    //std::cout << "SQLiteStore::Drop" << std::endl << std::flush;
     Poco::Data::Session session( GetPool()->get() );
 
     if( _tableExists( session, typeName ) )
