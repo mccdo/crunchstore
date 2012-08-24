@@ -168,9 +168,10 @@ bool Datum::IsStringVector( const boost::any& value ) const
 ////////////////////////////////////////////////////////////////////////////////
 bool Datum::IsBLOB( const boost::any& value ) const
 {
-    // If it's not any of our known types, it's a BLOB.
+    // If it's not any of our known types AND is not empty, it's a BLOB.
     if( !( (IsBool( value)) || (IsInt( value )) || (IsFloat( value )) ||
            (IsDouble( value )) || (IsString( value )) || (IsVectorized( value ))
+           || (value.empty())
         ) )
     {
         return true;
