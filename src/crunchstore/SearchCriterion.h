@@ -44,18 +44,20 @@ class CRUNCHSTORE_EXPORT SearchCriterion
 {
 public:
 
-    enum OPERATOR { AND, OR, LIKE, BETWEEN };
+    enum OPERATOR{ AND, OR, LIKE, BETWEEN };
 
-    SearchCriterion(  ):
+    SearchCriterion()
+        :
         m_isOperatorCriterion( false )
     {
-
+        ;
     }
 
-    SearchCriterion( OPERATOR op  ):
+    SearchCriterion( OPERATOR )
+        :
         m_isOperatorCriterion( true )
     {
-
+        ;
     }
 
     SearchCriterion( const std::string& key,
