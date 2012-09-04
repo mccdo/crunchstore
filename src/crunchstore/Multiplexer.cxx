@@ -234,7 +234,7 @@ void Multiplexer::ProcessBackgroundTasks()
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::AttachStore( DataAbstractionLayerPtr store,
                                          Store::StoreRole role,
-                                         Store::SyncMode mode )
+                                         Store::SyncMode )
 {
     //std::cout << "Multiplexer::AttachStore" << std::endl;
     std::pair< DataAbstractionLayerPtr, Store::StoreRole > storePair( store, role );

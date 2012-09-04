@@ -58,7 +58,7 @@ void DataAbstractionLayer::Load( Persistable& persistable, Role role )
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataAbstractionLayer::Remove( Persistable& persistable,
-                                   Role role )
+                                   Role )
 {
     if( m_child )
         m_child->Remove( persistable );

@@ -134,11 +134,15 @@ void SQLiteStore::Detach()
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::SaveImpl( const Persistable& persistable,
-                   Role role )
+                   Role )
 {
     //std::cout << "SQLiteStore::SaveImpl" << std::endl << std::flush;
+    if( !m_pool )
+    {
+        return;
+    }
 
-    Poco::Data::Session session( GetPool()->get() );
+    Poco::Data::Session session( m_pool->get() );
     Poco::Data::Statement statement( session );
 
     // Need to have explicitly named variables if we want to be able to bind
@@ -556,10 +560,15 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     //return returnVal;
 }
 ////////////////////////////////////////////////////////////////////////////////
-void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
+void SQLiteStore::LoadImpl( Persistable& persistable, Role )
 {
     //std::cout << "SQLiteStore::LoadImpl" << std::endl << std::flush;
-    Poco::Data::Session session( GetPool()->get() );
+    if( !m_pool )
+    {
+        return;
+    }
+
+    Poco::Data::Session session( m_pool->get() );
 
     // Need to have explicitly named variables if we want to be able to bind
     // with Poco::Data
@@ -757,11 +766,16 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role role )
 void SQLiteStore::Remove( Persistable& persistable )
 {
     //std::cout << "SQLiteStore::Remove" << std::endl << std::flush;
+    if( !m_pool )
+    {
+        return;
+    }
+
     std::string typeName = persistable.GetTypeName();
     if( HasIDForTypename( persistable.GetUUID(), persistable.GetTypeName() ) )
     {
         std::string idString = persistable.GetUUIDAsString();
-        Poco::Data::Session session( GetPool()->get() );
+        Poco::Data::Session session( m_pool->get() );
         session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
                 Poco::Data::use( idString ),
                 Poco::Data::now;
@@ -771,6 +785,10 @@ void SQLiteStore::Remove( Persistable& persistable )
 bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName )
 {
     //std::cout << "SQLiteStore::HasIDForTypename" << std::endl << std::flush;
+    if( !m_pool )
+    {
+        return false;
+    }
 
     if( !HasTypeName( typeName ) )
     {
@@ -783,7 +801,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id, const std::str
     std::string idString = boost::lexical_cast< std::string >( id );
     //std::cout << "SQLiteStore::HasIDForTypename id = " << idString << std::endl << std::flush;
 
-    Poco::Data::Session session( GetPool()->get() );
+    Poco::Data::Session session( m_pool->get() );
     session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
             Poco::Data::into( idTest ),
             Poco::Data::use( idString ),
@@ -803,7 +821,12 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
                                 std::vector< std::string >& resultIDs )
 {
     //std::cout << "SQLiteStore::GetIDsForTypename" << std::endl << std::flush;
-    Poco::Data::Session session( GetPool()->get() );
+    if( !m_pool )
+    {
+        return;
+    }
+
+    Poco::Data::Session session( m_pool->get() );
     Poco::Data::Statement statement( session );
 
     statement << "SELECT uuid FROM " << typeName, Poco::Data::into( resultIDs );
@@ -816,6 +839,11 @@ void SQLiteStore::Search( const std::string& typeName,
                           std::vector< std::string >& results )
 {
     //std::cout << "SQLiteStore::Search" << std::endl << std::flush;
+    if( !m_pool )
+    {
+        return;
+    }
+
     if( !HasTypeName( typeName ) )
     {
         //std::cout << "SQLiteStore::Search: Error: No table named " << typeName << std::endl << std::flush;
@@ -833,7 +861,7 @@ void SQLiteStore::Search( const std::string& typeName,
         wherePredicate += sc.m_comparison;
     }
 
-    Poco::Data::Session session( GetPool()->get() );
+    Poco::Data::Session session( m_pool->get() );
     Poco::Data::Statement statement( session );
     statement << "SELECT " << returnField << " FROM \"" << typeName << "\"";
     if( !wherePredicate.empty() )
@@ -1005,10 +1033,15 @@ size_t SQLiteStore::GetBoostAnyVectorSize( const boost::any& value )
     return size;
 }
 ////////////////////////////////////////////////////////////////////////////////
-void SQLiteStore::Drop( const std::string& typeName, Role role )
+void SQLiteStore::Drop( const std::string& typeName, Role )
 {
     //std::cout << "SQLiteStore::Drop" << std::endl << std::flush;
-    Poco::Data::Session session( GetPool()->get() );
+    if( !m_pool )
+    {
+        return;
+    }
+
+    Poco::Data::Session session( m_pool->get() );
 
     if( _tableExists( session, typeName ) )
     {

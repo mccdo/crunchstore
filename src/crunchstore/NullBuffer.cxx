@@ -39,7 +39,7 @@ NullBuffer::NullBuffer()
 {
 }
 ////////////////////////////////////////////////////////////////////////////////
-void NullBuffer::Buffer( std::vector< std::string > ids, BufferBase::BufferPriority priority )
+void NullBuffer::Buffer( std::vector< std::string >, BufferBase::BufferPriority )
 {
     ;
 }
