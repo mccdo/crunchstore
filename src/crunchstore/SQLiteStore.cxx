@@ -57,6 +57,7 @@ SQLiteStore::SQLiteStore():
 ////////////////////////////////////////////////////////////////////////////////
 SQLiteStore::~SQLiteStore()
 {
+    //std::cout << "$$$$$ ~SQLiteStore" << std::endl << std::flush;
     Detach();
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -90,6 +91,11 @@ void SQLiteStore::Attach()
 bool SQLiteStore::HasTypeName( const std::string& typeName )
 {
     //std::cout << "SQLiteStore::HasTypeName" << std::endl << std::flush;
+    if( !m_pool )
+    {
+        return false;
+    }
+
     bool exists = false;
     Poco::Data::Session session( m_pool->get() );
     try
