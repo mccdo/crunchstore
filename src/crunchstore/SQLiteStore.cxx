@@ -85,6 +85,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
 
     bool exists = false;
     Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
     try
     {
         session << "SELECT 1 FROM sqlite_master WHERE name='" << typeName << "'",
@@ -130,6 +131,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     }
 
     Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
     Poco::Data::Statement statement( session );
 
     // Need to have explicitly named variables if we want to be able to bind
@@ -556,6 +558,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
     }
 
     Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
 
     // Need to have explicitly named variables if we want to be able to bind
     // with Poco::Data
@@ -763,6 +766,7 @@ void SQLiteStore::Remove( Persistable& persistable )
     {
         std::string idString = persistable.GetUUIDAsString();
         Poco::Data::Session session( m_pool->get() );
+        session.setProperty( "maxRetryAttempts", 4 );
         session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
                 Poco::Data::use( idString ),
                 Poco::Data::now;
@@ -789,6 +793,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id, const std::str
     //std::cout << "SQLiteStore::HasIDForTypename id = " << idString << std::endl << std::flush;
 
     Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
     session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
             Poco::Data::into( idTest ),
             Poco::Data::use( idString ),
@@ -814,6 +819,7 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     }
 
     Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
     Poco::Data::Statement statement( session );
 
     statement << "SELECT uuid FROM " << typeName, Poco::Data::into( resultIDs );
@@ -849,6 +855,7 @@ void SQLiteStore::Search( const std::string& typeName,
     }
 
     Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
     Poco::Data::Statement statement( session );
     statement << "SELECT " << returnField << " FROM \"" << typeName << "\"";
     if( !wherePredicate.empty() )
@@ -1029,6 +1036,7 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
     }
 
     Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
 
     if( _tableExists( session, typeName ) )
     {
