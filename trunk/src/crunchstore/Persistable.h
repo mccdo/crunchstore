@@ -130,6 +130,15 @@ public:
 
 protected:
 
+    /// Creates a new UUID for this Persistable. Used for lazy creation of
+    /// UUIDs.
+    void CreateUUID() const;
+
+    /// Creates a default TypeName based on the UUID if a TypeName has not
+    /// previously been set. Used for lazy TypeName creation since UUID
+    /// creation is also lazy.
+    void CreateTypeNameFromUUID() const;
+
     /// Typedef for datum map to make it easier to switch to a different
     /// underlying type in future if needed.
     typedef std::map< std::string, DatumPtr > DataMap;
@@ -140,14 +149,24 @@ protected:
     /// Maintains a list of available data sorted by order of addition
     std::vector< std::string > m_dataList;
 
-    /// The uuid
-    boost::uuids::uuid m_UUID;
-    /// The uuid as a std::string
-    std::string m_UUIDString;
+    /// The uuid; mutable since it might need to be created in first call
+    /// to GetUUID, GetUUIDString, or first time it is saved to a store.
+    mutable boost::uuids::uuid m_UUID;
+    /// The uuid as a std::string; mutable for same reason as m_UUID.
+    mutable std::string m_UUIDString;
 
 private:
-    /// Holds the typename
-    std::string m_typename;
+    /// Flag to tell whether we've assigned a UUID. The creation of
+    /// a UUID is expensive, so we delay creation until it is needed because
+    /// there will be many cases in which application code explicitly sets
+    /// a UUID (so we don't need to generate one), or where the persistable
+    /// is used strictly as a holder for data without need for a UUID. Mutable
+    /// since this is associated with lazy UUID creation.
+    mutable bool m_uuidSet;
+
+    /// Holds the typename; mutable since it is (sometimes) associated with
+    /// lazy creation of UUID.
+    mutable std::string m_typename;
 
     /// Empty string to use when need to return an empty string by reference
     std::string emptyString;
