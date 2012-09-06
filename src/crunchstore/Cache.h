@@ -32,6 +32,17 @@ public:
     Cache();
     virtual ~Cache();
     virtual void Buffer( std::vector< std::string > ids, BufferPriority priority = NORMAL_PRIORITY ) = 0;
+
+    /// Override of method in DataAbstractionLayer. A cache is always the first
+    /// "real" layer a Persistable travels through on the way to a store. Since
+    /// we use lazy UUID creation in Persistable, we must ensure that the
+    /// Persistable gets a valid UUID before anything else happens. To do that,
+    /// we simply need to request the UUID via persistable.GetUUID(). Any class
+    /// that derives from Cache and overrides this method must do two things:
+    /// 1. Call persistable.GetUUID() before you do anything else
+    /// 2. Call m_child->Save( persistable, role ) to ensure that the save
+    ///    call propagates up the chain to a buffer and a store.
+    virtual void Save( const Persistable& persistable, Role role = DEFAULT_ROLE );
 };
 
 } // namespace crunchstore

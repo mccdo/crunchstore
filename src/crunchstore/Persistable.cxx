@@ -37,17 +37,19 @@ namespace crunchstore
 
 ////////////////////////////////////////////////////////////////////////////////
 Persistable::Persistable():
-    m_UUID( boost::uuids::random_generator()() )
+    //m_UUID( boost::uuids::random_generator()() )
+    m_uuidSet( false )
 {
-    m_UUIDString = boost::lexical_cast< std::string >( m_UUID );
-    m_typename = m_UUIDString;
-    boost::algorithm::erase_all( m_typename, "-" );
+    //m_UUIDString = boost::lexical_cast< std::string >( m_UUID );
+    //m_typename = m_UUIDString;
+    //boost::algorithm::erase_all( m_typename, "-" );
 }
 ////////////////////////////////////////////////////////////////////////////////
 Persistable::Persistable( const std::string& typeName ):
-    m_UUID( boost::uuids::random_generator()() )
+    //m_UUID( boost::uuids::random_generator()() )
+    m_uuidSet( false )
 {
-    m_UUIDString = boost::lexical_cast< std::string >( m_UUID );
+    //m_UUIDString = boost::lexical_cast< std::string >( m_UUID );
     m_typename = typeName;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -73,11 +75,30 @@ Persistable::~Persistable()
 
 }
 ////////////////////////////////////////////////////////////////////////////////
+void Persistable::CreateUUID() const
+{
+    m_UUID = boost::uuids::random_generator()();
+    m_UUIDString = boost::lexical_cast< std::string >( m_UUID );
+    m_uuidSet = true;
+
+    if( m_typename.empty() )
+    {
+        CreateTypeNameFromUUID();
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+void Persistable::CreateTypeNameFromUUID() const
+{
+    m_typename = m_UUIDString;
+    boost::algorithm::erase_all( m_typename, "-" );
+}
+////////////////////////////////////////////////////////////////////////////////
 void Persistable::SetUUID( std::string const& uuid )
 {
     m_UUIDString = uuid;
     boost::uuids::string_generator gen;
     m_UUID = gen( uuid );
+    m_uuidSet = true;
 }
 ////////////////////////////////////////////////////////////////////////////////
 void Persistable::SetUUID( boost::uuids::uuid const& uuid )
@@ -87,15 +108,25 @@ void Persistable::SetUUID( boost::uuids::uuid const& uuid )
     std::stringstream ss;
     ss << m_UUID;
     m_UUIDString = ss.str();
+
+    m_uuidSet = true;
 }
 ////////////////////////////////////////////////////////////////////////////////
 boost::uuids::uuid const& Persistable::GetUUID() const
 {
+    if( !m_uuidSet )
+    {
+        CreateUUID();
+    }
     return m_UUID;
 }
 ////////////////////////////////////////////////////////////////////////////////
 std::string const& Persistable::GetUUIDAsString() const
 {
+    if( !m_uuidSet )
+    {
+        CreateUUID();
+    }
     return m_UUIDString;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,6 +137,10 @@ void Persistable::SetTypeName( std::string name )
 ////////////////////////////////////////////////////////////////////////////////
 std::string const& Persistable::GetTypeName() const
 {
+    if( !m_uuidSet )
+    {
+        CreateUUID();
+    }
     return m_typename;
 }
 ////////////////////////////////////////////////////////////////////////////////
