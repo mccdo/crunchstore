@@ -51,7 +51,7 @@ public:
       */
     virtual void Detach();
 
-    virtual void Remove( Persistable& persistable );
+    virtual void Remove( Persistable& persistable, Role role = DEFAULT_ROLE );
 
     virtual bool HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName );
 

@@ -40,13 +40,20 @@ public:
         ;
     }
 
-    SearchCriterion( OPERATOR )
+    SearchCriterion( OPERATOR op )
         :
-        m_isOperatorCriterion( true )
+        m_isOperatorCriterion( true ),
+        m_operator( op )
     {
         ;
     }
 
+    /// Creates a SearchCriterion with the designated key, comparison, and value.
+    /// Example: in the statement Foo = Bar, the key is "Foo", the comparison is
+    /// "=", and the value is "Bar".
+    /// If the criterion is part of a LIKE or BETWEEN operation, pass in an
+    /// empty string for the key and comparison, and put the appropriate value
+    /// in the value parameter.
     SearchCriterion( const std::string& key,
                      const std::string& comparison,
                      boost::any value ):
@@ -62,6 +69,7 @@ public:
     std::string m_key;
     std::string m_comparison;
     boost::any m_value;
+    OPERATOR m_operator;
 };
 
 } // crunchstore
