@@ -756,7 +756,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-void SQLiteStore::Remove( Persistable& persistable )
+void SQLiteStore::Remove( Persistable& persistable, Role )
 {
     //std::cout << "SQLiteStore::Remove" << std::endl << std::flush;
     if( !m_pool )
@@ -851,13 +851,58 @@ void SQLiteStore::Search( const std::string& typeName,
     // For now, we only treat a single keyvalue criterion. More advanced processing
     // can be added later.
     std::string wherePredicate;
+    std::string bindings;
     SearchCriterion sc;
-    if( !criteria.empty() )
+    /*if( !criteria.empty() )
     {
         sc = criteria.at(0);
         wherePredicate = sc.m_key;
         wherePredicate += " ";
         wherePredicate += sc.m_comparison;
+    }*/
+    unsigned int monotonic = 0;
+    for( size_t index = 0; index < criteria.size(); ++index )
+    {
+        sc = criteria.at(index);
+        // Build up the wherePredicate
+        if( sc.m_isOperatorCriterion )
+        {
+            // Put in any AND, OR, LIKE, BETWEEN operators
+            switch( sc.m_operator )
+            {
+                case SearchCriterion::AND:
+                {
+                    wherePredicate += " AND ";
+                    break;
+                }
+                case SearchCriterion::OR:
+                {
+                    wherePredicate += " OR ";
+                    break;
+                }
+                case SearchCriterion::LIKE:
+                {
+                    wherePredicate += " LIKE ";
+                    break;
+                }
+                case SearchCriterion::BETWEEN:
+                {
+                    wherePredicate += " BETWEEN ";
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            // Put in a [key] [comparison] [value] clause
+            wherePredicate += sc.m_key + " " + sc.m_comparison + " ";
+            wherePredicate += ":" + boost::lexical_cast<std::string >( monotonic );
+            ++monotonic;
+        }
     }
 
     Poco::Data::Session session( m_pool->get() );
@@ -867,7 +912,7 @@ void SQLiteStore::Search( const std::string& typeName,
     statement << "SELECT " << returnField << " FROM \"" << typeName << "\"";
     if( !wherePredicate.empty() )
     {
-        statement << " WHERE " << wherePredicate << " :0";
+        statement << " WHERE " << wherePredicate;
     }
     statement, Poco::Data::into( results );
 
@@ -877,7 +922,7 @@ void SQLiteStore::Search( const std::string& typeName,
         bindable.BindValue( &statement, sc.m_value );
     }
 
-    //std::cout << "SQLiteStore::Search query: " << statement.toString() << std::endl << std::flush;
+    std::cout << "SQLiteStore::Search query: " << statement.toString() << std::endl << std::flush;
     statement.execute();
 }
 ////////////////////////////////////////////////////////////////////////////////

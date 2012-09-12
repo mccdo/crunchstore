@@ -45,10 +45,10 @@ void DataAbstractionLayer::Load( Persistable& persistable, Role role )
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataAbstractionLayer::Remove( Persistable& persistable,
-                                   Role )
+                                   Role role )
 {
     if( m_child )
-        m_child->Remove( persistable );
+        m_child->Remove( persistable, role );
 }
 ////////////////////////////////////////////////////////////////////////////////
 bool DataAbstractionLayer::HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName )
