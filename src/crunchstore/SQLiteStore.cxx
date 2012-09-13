@@ -916,14 +916,38 @@ void SQLiteStore::Search( const std::string& typeName,
     }
     statement, Poco::Data::into( results );
 
-    BindableAnyWrapper bindable;
+    std::vector< BindableAnyWrapper* > bindableVector;
+    BindableAnyWrapper* bindable;
     if( !wherePredicate.empty() )
     {
-        bindable.BindValue( &statement, sc.m_value );
+        for( size_t index = 0; index < criteria.size(); ++index )
+        {
+            sc = criteria.at(index);
+            if( !sc.m_isOperatorCriterion )
+            {
+                bindable = new BindableAnyWrapper;
+                bindableVector.push_back( bindable );
+                bindable->BindValue( &statement, sc.m_value );
+            }
+        }
     }
 
-    std::cout << "SQLiteStore::Search query: " << statement.toString() << std::endl << std::flush;
-    statement.execute();
+    try
+    {
+        statement.execute();
+    }
+    catch( Poco::Data::DataException &e )
+    {
+        std::cout << "SQLiteStore::Search: " << e.displayText() << std::endl;
+    }
+
+    std::vector< BindableAnyWrapper* >::iterator biterator =
+                bindableVector.begin();
+    while( biterator != bindableVector.end() )
+    {
+        delete ( *biterator );
+        ++biterator;
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::ProcessBackgroundTasks()
