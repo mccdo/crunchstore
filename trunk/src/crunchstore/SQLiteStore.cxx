@@ -95,7 +95,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
     }
     catch( Poco::Data::DataException &e )
     {
-        std::cout << e.displayText() << std::endl;
+        std::cout << "SQLiteStore::HasTypename: " << e.displayText() << std::endl;
         exists = false;
     }
     return exists;
@@ -148,7 +148,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         return;// false;
     }
 
-    // These two don't get used until about 150 lines down, but need to be
+    // These two don't get used until about 150 lines down, but need to befcatc
     // declared outside the try{} block so memory can be properly cleaned
     // up in case of an exception during writing to database
     // Stores bindable wrappers for later deletion
@@ -579,7 +579,14 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
 
     Poco::Data::Statement statement( session );
     statement << "SELECT * FROM \"" << tableName << "\" WHERE uuid=:0", Poco::Data::use( uuidString );
-    statement.execute();
+    try
+    {
+        statement.execute();
+    }
+    catch( Poco::Data::DataException &e )
+    {
+        std::cout << "SQLiteStore::LoadImpl: " << e.displayText() << std::endl;
+    }
 
     Poco::Data::RecordSet recordset( statement );
 
@@ -687,7 +694,14 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
             statement << "SELECT " << fieldName << " FROM \"" << persistable.GetTypeName()
                     << "_" << *it << "\" WHERE PropertySetParentID=:0"
                     , Poco::Data::use( mUUIDString );
-            statement.execute();
+            try
+            {
+                statement.execute();
+            }
+            catch( Poco::Data::DataException &e )
+            {
+                std::cout << "SQLiteStore::LoadImpl_vectorized: " << e.displayText() << std::endl;
+            }
             Poco::Data::RecordSet recordset( statement );
             //std::cout << fieldName << " " << mTableName << " " << iterator->first << std::endl;
             if( property->IsIntVector() )
@@ -771,9 +785,16 @@ void SQLiteStore::Remove( Persistable& persistable, Role )
         Poco::Data::Session session( m_pool->get() );
         session.setProperty( "maxRetryAttempts", 4 );
         session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-        session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
+        try
+        {
+            session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
                 Poco::Data::use( idString ),
                 Poco::Data::now;
+        }
+        catch( Poco::Data::DataException &e )
+        {
+            std::cout << "SQLiteStore::Remove: " << e.displayText() << std::endl;
+        }
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -799,10 +820,17 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id, const std::str
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
+    try
+    {
+        session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
             Poco::Data::into( idTest ),
             Poco::Data::use( idString ),
             Poco::Data::now;
+    }
+    catch( Poco::Data::DataException &e )
+    {
+        std::cout << "SQLiteStore::HasIDForTypename: " << e.displayText() << std::endl;
+    }
 
     if( idTest.empty() )
     {
@@ -829,7 +857,14 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     Poco::Data::Statement statement( session );
 
     statement << "SELECT uuid FROM " << typeName, Poco::Data::into( resultIDs );
-    statement.execute();
+    try
+    {
+        statement.execute();
+    }
+    catch( Poco::Data::DataException &e )
+    {
+        std::cout << "SQLiteStore::GetIDsForTypename: " << e.displayText() << std::endl;
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Search( const std::string& typeName,
@@ -962,10 +997,17 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
 
     // "SELECT 1 ... will put a 1 (true) into the boolean value if the tablename
     // is found in the database.
-    session << "SELECT 1 FROM sqlite_master WHERE name=:name",
+    try
+    {
+        session << "SELECT 1 FROM sqlite_master WHERE name=:name",
             Poco::Data::into( tableExists ),
             Poco::Data::use( TableName ),
             Poco::Data::now;
+    }
+    catch( Poco::Data::DataException &e )
+    {
+        std::cout << "SQLiteStore::_tableExists: " << e.displayText() << std::endl;
+    }
 
     return tableExists;
 }
@@ -1117,7 +1159,14 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
 
     if( _tableExists( session, typeName ) )
     {
-        session << "DROP TABLE " << typeName, Poco::Data::now;
+        try
+        {
+            session << "DROP TABLE " << typeName, Poco::Data::now;
+        }
+        catch( Poco::Data::DataException &e )
+        {
+            std::cout << "SQLiteStore::Drop: " << e.displayText() << std::endl;
+        }
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
