@@ -25,6 +25,7 @@ namespace crunchstore
 DataManager::DataManager()
 {
     m_dataMultiplexer = DataAbstractionLayerPtr( new Multiplexer );
+    //std::cout << "DM: " << this << std::endl << std::flush;
 }
 ////////////////////////////////////////////////////////////////////////////////
 DataManager::~DataManager()

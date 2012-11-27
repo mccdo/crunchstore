@@ -25,6 +25,7 @@ namespace crunchstore
 
 Multiplexer::Multiplexer()
 {
+    //std::cout << "MUX: " << this << std::endl << std::flush;
 }
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::Save( const Persistable& persistable, Role role )
@@ -52,7 +53,8 @@ void Multiplexer::Save( const Persistable& persistable, Role role )
     if( role & VERSIONING_ROLE )
     {
         //std::cout << "Multiplexer::Save -- VERSIONING_ROLE" << std::endl;
-        m_fullVersioningStore->Save( persistable );
+        if( m_fullVersioningStore )
+            m_fullVersioningStore->Save( persistable );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,12 +64,14 @@ void Multiplexer::Load( Persistable& persistable, Role role )
     {
     case VERSIONING_ROLE:
     {
-        m_fullVersioningStore->Load( persistable );
+        if( m_fullVersioningStore )
+            m_fullVersioningStore->Load( persistable );
         break;
     }
     case WORKING_ROLE:
     {
-        m_workingStore->Load( persistable );
+        if( m_workingStore )
+            m_workingStore->Load( persistable );
         break;
     }
     case DEFAULT_ROLE:
@@ -116,20 +120,25 @@ void Multiplexer::Remove( Persistable& persistable, Role role )
     {
     case VERSIONING_ROLE:
     {
-        m_fullVersioningStore->Remove( persistable );
+        if( m_fullVersioningStore )
+            m_fullVersioningStore->Remove( persistable );
         break;
     }
     case WORKING_ROLE:
     {
-        m_workingStore->Remove( persistable );
+        if( m_workingStore )
+            m_workingStore->Remove( persistable );
         break;
     }
     case DEFAULT_ROLE:
     {
-        const boost::uuids::uuid id = persistable.GetUUID();
-        if( m_workingStore->HasIDForTypename( id, persistable.GetTypeName() ) )
+        if( m_workingStore )
         {
-            m_workingStore->Remove( persistable );
+            const boost::uuids::uuid id = persistable.GetUUID();
+            if( m_workingStore->HasIDForTypename( id, persistable.GetTypeName() ) )
+            {
+                m_workingStore->Remove( persistable );
+            }
         }
         // DEFAULT_ROLE always falls through to BACKING_ROLE
     }
@@ -164,17 +173,20 @@ void Multiplexer::GetIDsForTypename( const std::string& typeName,
     {
     case VERSIONING_ROLE:
     {
-        m_fullVersioningStore->GetIDsForTypename( typeName, resultIDs );
+        if( m_fullVersioningStore )
+            m_fullVersioningStore->GetIDsForTypename( typeName, resultIDs );
         break;
     }
     case WORKING_ROLE:
     {
-        m_workingStore->GetIDsForTypename( typeName, resultIDs );
+        if( m_workingStore )
+            m_workingStore->GetIDsForTypename( typeName, resultIDs );
         break;
     }
     case DEFAULT_ROLE:
     {
-        m_workingStore->GetIDsForTypename( typeName, resultIDs );
+        if( m_workingStore )
+            m_workingStore->GetIDsForTypename( typeName, resultIDs );
         // DEFAULT_ROLE always falls through to BACKING_ROLE
     }
     case BACKING_ROLE:
@@ -210,8 +222,10 @@ void Multiplexer::Search( const std::string& typeName,
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::ProcessBackgroundTasks()
 {
-    m_workingStore->ProcessBackgroundTasks();
-    m_fullVersioningStore->ProcessBackgroundTasks();
+    if( m_workingStore )
+        m_workingStore->ProcessBackgroundTasks();
+    if( m_fullVersioningStore )
+        m_fullVersioningStore->ProcessBackgroundTasks();
     std::vector< DataAbstractionLayerPtr >::iterator it = m_backingStores.begin();
     while( it != m_backingStores.end() )
     {
@@ -253,6 +267,19 @@ void Multiplexer::DetachStore( DataAbstractionLayerPtr store )
         ++it;
     }
 
+    if( store == m_workingStore )
+    {
+        m_workingStore = DataAbstractionLayerPtr();
+    }
+    else if( store == m_fullVersioningStore )
+    {
+        m_fullVersioningStore = DataAbstractionLayerPtr();
+    }
+    else
+    {
+
+    }
+
     // Do we want to throw if the passed store wasn't found?
     //throw "DetachStore: unable to find store.";
 }
@@ -263,17 +290,20 @@ void Multiplexer::Drop( const std::string& typeName, Role role  )
     {
     case VERSIONING_ROLE:
     {
-        m_fullVersioningStore->Drop( typeName, role );
+        if( m_fullVersioningStore )
+            m_fullVersioningStore->Drop( typeName, role );
         break;
     }
     case WORKING_ROLE:
     {
-        m_workingStore->Drop( typeName, role );
+        if( m_workingStore )
+            m_workingStore->Drop( typeName, role );
         break;
     }
     case DEFAULT_ROLE:
     {
-        m_workingStore->Drop( typeName, role );
+        if( m_workingStore )
+            m_workingStore->Drop( typeName, role );
         // DEFAULT_ROLE always falls through to BACKING_ROLE
     }
     case BACKING_ROLE:
@@ -291,6 +321,49 @@ void Multiplexer::Drop( const std::string& typeName, Role role  )
         ;// do nothing
     }
     } // switch( role )
+}
+////////////////////////////////////////////////////////////////////////////////
+bool Multiplexer::HasIDForTypename( const boost::uuids::uuid& id,
+                                    const std::string& typeName,
+                                    Role role )
+{
+    int result = 0;
+    switch( role )
+    {
+    case VERSIONING_ROLE:
+    {
+        if( m_fullVersioningStore )
+            result += m_fullVersioningStore->HasIDForTypename( id, typeName, role );
+        break;
+    }
+    case WORKING_ROLE:
+    {
+        if( m_workingStore )
+            result += m_workingStore->HasIDForTypename( id, typeName, role );
+        break;
+    }
+    case DEFAULT_ROLE:
+    {
+        if( m_workingStore )
+            result += m_workingStore->HasIDForTypename( id, typeName, role );
+        // DEFAULT_ROLE always falls through to BACKING_ROLE
+    }
+    case BACKING_ROLE:
+    {
+        std::vector< DataAbstractionLayerPtr >::iterator it = m_backingStores.begin();
+        while( it != m_backingStores.end() )
+        {
+            result += (*it)->HasIDForTypename( id, typeName, role );
+            ++it;
+        }
+        break;
+    }
+    default:
+    {
+        ;// do nothing
+    }
+    } // switch( role )
+    return static_cast<bool>(result);
 }
 ////////////////////////////////////////////////////////////////////////////////
 } // namespace crunchstore
