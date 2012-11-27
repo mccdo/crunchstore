@@ -40,6 +40,7 @@ namespace crunchstore
 SQLiteStore::SQLiteStore():
             m_pool(0)
 {
+    //std::cout << "SQL: " << this << std::endl << std::flush;
 }
 ////////////////////////////////////////////////////////////////////////////////
 SQLiteStore::~SQLiteStore()
@@ -798,7 +799,9 @@ void SQLiteStore::Remove( Persistable& persistable, Role )
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName )
+bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
+                                    const std::string& typeName,
+                                    Role )
 {
     //std::cout << "SQLiteStore::HasIDForTypename" << std::endl << std::flush;
     if( !m_pool )

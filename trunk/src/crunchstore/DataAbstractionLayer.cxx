@@ -19,6 +19,7 @@
  *************** <auto-copyright.rb END do not edit this line> ***************/
 #include <crunchstore/DataAbstractionLayer.h>
 #include <crunchstore/SearchCriterion.h>
+#include <iostream>
 
 namespace crunchstore
 {
@@ -51,9 +52,15 @@ void DataAbstractionLayer::Remove( Persistable& persistable,
         m_child->Remove( persistable, role );
 }
 ////////////////////////////////////////////////////////////////////////////////
-bool DataAbstractionLayer::HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName )
+bool DataAbstractionLayer::HasIDForTypename( const boost::uuids::uuid& id,
+                                             const std::string& typeName,
+                                             Role role )
 {
-    return m_child->HasIDForTypename( id, typeName );
+    //std::cout << "DAL::HasIDForTypename: " << this << std::endl << std::flush;
+    if( !m_child )
+        return false;
+
+    return m_child->HasIDForTypename( id, typeName, role );
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataAbstractionLayer::GetIDsForTypename( const std::string& typeName, std::vector< std::string >& resultIDs )

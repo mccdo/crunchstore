@@ -48,6 +48,11 @@ public:
 
     void ProcessBackgroundTasks();
 
+    /// Does this DAL object have a datum with this ID?
+    virtual bool HasIDForTypename( const boost::uuids::uuid& id,
+                                   const std::string& typeName,
+                                   Role role = DEFAULT_ROLE );
+
     // Attaches and detaches stores from the data access flow
     void AttachStore( DataAbstractionLayerPtr store,
                       Store::StoreRole role,

@@ -52,7 +52,9 @@ public:
     virtual void Remove( Persistable& persistable, Role role = DEFAULT_ROLE );
 
     /// Does this DAL object have a datum with this ID?
-    virtual bool HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName );
+    virtual bool HasIDForTypename( const boost::uuids::uuid& id,
+                                   const std::string& typeName,
+                                   Role role = DEFAULT_ROLE  );
 
     /// Gets all available IDs for a given type.
     virtual void GetIDsForTypename( const std::string& typeName,
