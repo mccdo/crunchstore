@@ -32,6 +32,9 @@
 #include <Poco/Data/RecordSet.h>
 #include <Poco/Data/BLOB.h>
 
+#include <stdexcept>
+
+
 #include <iostream>
 
 namespace crunchstore
@@ -88,11 +91,21 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
     try
     {
-        session << "SELECT 1 FROM sqlite_master WHERE name='" << typeName << "'",
+        if( dbLock.tryLock( 500 ) )
+        {
+            session << "SELECT 1 FROM sqlite_master WHERE name='" << typeName << "'",
                 Poco::Data::into( exists ),
                 Poco::Data::now;
+            dbLock.unlock();
+        }
+        else
+        {
+            throw std::runtime_error( "Unable to obtain lock in SQLiteStore::HasTypeName" );
+        }
     }
     catch( Poco::Data::DataException &e )
     {
@@ -135,6 +148,8 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
     Poco::Data::Statement statement( session );
 
     // Need to have explicitly named variables if we want to be able to bind
@@ -163,7 +178,16 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             std::string columnHeaderString = _buildColumnHeaderString( persistable );
             Poco::Data::Statement sm( session );
             sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
-            sm.execute();
+            if( dbLock.tryLock( 500 ) )
+            {
+                sm.execute();
+            }
+            else
+            {
+                std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
+                return;
+            }
+            dbLock.unlock();
         }
 
         // Determine whether a record already exists for this PropertySet.
@@ -336,7 +360,16 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
 
         //std::cout << statement.toString() << std::endl;
 
-        statement.execute();
+        if( dbLock.tryLock( 500 ) )
+        {
+            statement.execute();
+            dbLock.unlock();
+        }
+        else
+        {
+            throw std::runtime_error( "Unable to obtain lock while writing data in SQLiteStore::_SaveImpl" );
+        }
+
         // If we've made it here, we successfully wrote to database
         //returnVal = true;
     }
@@ -344,6 +377,11 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     {
         std::cout << "SQLiteStore::SaveImpl: " << e.displayText() << std::endl;
     }
+    catch( std::runtime_error &e )
+    {
+        std::cout << "SQLiteStore::SaveImpl: " << e.what() << std::endl;
+    }
+
     catch( ... )
     {
         std::cout << "SQLiteStore::SaveImpl: Unspecified error when writing to database." << std::endl;
@@ -367,174 +405,183 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     // happen very quickly. Failure to use a transaction in this instance
     // will cause lists to take roughly .25 seconds *per item*. With a transaction,
     // 10,000 items can be inserted or updated in ~1 second.
-    session.begin();
-    DatumPtr property;
-    std::vector< std::string > dataList = persistable.GetDataList();
-    std::vector< std::string >::const_iterator it = dataList.begin();
-    while( it != dataList.end() )
+    if( dbLock.tryLock( 500 ) )
     {
-        property = persistable.GetDatum( *it );
-        if( property->IsVectorized() )
+        session.begin();
+        DatumPtr property;
+        std::vector< std::string > dataList = persistable.GetDataList();
+        std::vector< std::string >::const_iterator it = dataList.begin();
+        while( it != dataList.end() )
         {
-            // Vectors (lists) are written into separate tables named
-            // ParentTable_[ThisPropertyName]. Prefixing with the parent table
-            // name ensures that property names need not be unique across all property
-            // sets. For example, PropertySetA might have a property called
-            // 'Directions' that is a list of strings, and PropertySetB might have a property
-            // set called 'Directions' that is a list of integers. If the child table is
-            // simply called "Directions", there could be foreign key overlap in the child table,
-            // as well as problems with type mis-match. Prefixing with the parent table's
-            // name prevents such issues.
+            property = persistable.GetDatum( *it );
+            if( property->IsVectorized() )
+            {
+                // Vectors (lists) are written into separate tables named
+                // ParentTable_[ThisPropertyName]. Prefixing with the parent table
+                // name ensures that property names need not be unique across all property
+                // sets. For example, PropertySetA might have a property called
+                // 'Directions' that is a list of strings, and PropertySetB might have a property
+                // set called 'Directions' that is a list of integers. If the child table is
+                // simply called "Directions", there could be foreign key overlap in the child table,
+                // as well as problems with type mis-match. Prefixing with the parent table's
+                // name prevents such issues.
 
-            enum LISTTYPE
-            {
-                UNKNOWN, INTEGER, FLOAT, DOUBLE, STRING
-            };
-            LISTTYPE listType = UNKNOWN;
-            std::string columnType( "" );
-
-            // Determine the list type and set the column type in case the table
-            // must be created.
-            if( property->IsIntVector() )
-            {
-                listType = INTEGER;
-                columnType = "INTEGER";
-            }
-            else if( property->IsFloatVector() )
-            {
-                listType = FLOAT;
-                columnType = "FLOAT";
-            }
-            else if( property->IsDoubleVector() )
-            {
-                listType = DOUBLE;
-                columnType = "DOUBLE";
-            }
-            else if( property->IsStringVector() )
-            {
-                listType = STRING;
-                columnType = "TEXT";
-            }
-
-            if( listType != UNKNOWN )
-            {
-                // New (sub)table gets the name
-                // [ParentTableName]_[currentFieldName]
-                std::string newTableName( tableName );
-                newTableName += "_";
-                std::string fieldName = *it;
-                newTableName += fieldName;
-
-                // Check for existing table; if table doesn't exist, create it.
-                if( !_tableExists( session, newTableName ) )
+                enum LISTTYPE
                 {
-                    session << "CREATE TABLE \"" << newTableName <<
-                            "\" (id INTEGER PRIMARY KEY,PropertySetParentID TEXT,"
-                            << fieldName << " " << columnType << ")", Poco::Data::now;
+                    UNKNOWN, INTEGER, FLOAT, DOUBLE, STRING
+                };
+                LISTTYPE listType = UNKNOWN;
+                std::string columnType( "" );
+
+                // Determine the list type and set the column type in case the table
+                // must be created.
+                if( property->IsIntVector() )
+                {
+                    listType = INTEGER;
+                    columnType = "INTEGER";
+                }
+                else if( property->IsFloatVector() )
+                {
+                    listType = FLOAT;
+                    columnType = "FLOAT";
+                }
+                else if( property->IsDoubleVector() )
+                {
+                    listType = DOUBLE;
+                    columnType = "DOUBLE";
+                }
+                else if( property->IsStringVector() )
+                {
+                    listType = STRING;
+                    columnType = "TEXT";
                 }
 
-                // First part of query will delete everything from the sub-table
-                // that this propertyset owns. We do this because it is
-                // much easier than checking whether the data exists
-                // and attempting to do an update. In the case of a list like this,
-                // we'd not only have to see if the list already exists in the table,
-                // but whether it's the same length. Then we'd have to either delete
-                // rows from the table or insert rows to make the lengths match
-                // before doing an update. Far easier to wipe out what's there
-                // and start fresh. It's probably a little slower for large
-                // lists to do it this way. If lists become a performance
-                // problem, this is one place to look for possible speedups.
-                // "DELETE FROM [newtablename] WHERE PropertySetParentID=[id]"
-                std::string listQuery;
-                listQuery += "DELETE FROM \"";
-                listQuery += newTableName;
-                listQuery += "\" WHERE ";
-                listQuery += "PropertySetParentID=";
-                //listQuery += boost::lexical_cast<std::string > ( mID );
-                listQuery += "\"";
-                listQuery += uuidString;
-                listQuery += "\"";
-
-                session << listQuery, Poco::Data::now;
-                listQuery.clear();
-
-                BindableAnyWrapper* bindable;
-                size_t max = GetBoostAnyVectorSize( property->GetValue() );
-                for( size_t index = 0; index < max; ++index )
+                if( listType != UNKNOWN )
                 {
-                    // Build up query:
-                    // INSERT INTO [newTableName]
-                    // ([fieldName],PropertySetParentID) VALUES (:num,[mID])
-                    listQuery += "INSERT INTO \"";
+                    // New (sub)table gets the name
+                    // [ParentTableName]_[currentFieldName]
+                    std::string newTableName( tableName );
+                    newTableName += "_";
+                    std::string fieldName = *it;
+                    newTableName += fieldName;
+
+                    // Check for existing table; if table doesn't exist, create it.
+                    if( !_tableExists( session, newTableName ) )
+                    {
+                        session << "CREATE TABLE \"" << newTableName <<
+                                "\" (id INTEGER PRIMARY KEY,PropertySetParentID TEXT,"
+                                << fieldName << " " << columnType << ")", Poco::Data::now;
+                    }
+
+                    // First part of query will delete everything from the sub-table
+                    // that this propertyset owns. We do this because it is
+                    // much easier than checking whether the data exists
+                    // and attempting to do an update. In the case of a list like this,
+                    // we'd not only have to see if the list already exists in the table,
+                    // but whether it's the same length. Then we'd have to either delete
+                    // rows from the table or insert rows to make the lengths match
+                    // before doing an update. Far easier to wipe out what's there
+                    // and start fresh. It's probably a little slower for large
+                    // lists to do it this way. If lists become a performance
+                    // problem, this is one place to look for possible speedups.
+                    // "DELETE FROM [newtablename] WHERE PropertySetParentID=[id]"
+                    std::string listQuery;
+                    listQuery += "DELETE FROM \"";
                     listQuery += newTableName;
-                    listQuery += "\" (";
-                    listQuery += fieldName;
-                    listQuery += ",PropertySetParentID) VALUES (:";
-                    listQuery += boost::lexical_cast<std::string > ( index );
-                    listQuery += ",";
+                    listQuery += "\" WHERE ";
+                    listQuery += "PropertySetParentID=";
                     //listQuery += boost::lexical_cast<std::string > ( mID );
                     listQuery += "\"";
                     listQuery += uuidString;
                     listQuery += "\"";
-                    listQuery += ")";
 
-                    // Turn into a prepared statement that can accept bindings
-                    Poco::Data::Statement listStatement( session );
-                    listStatement << listQuery;
+                    session << listQuery, Poco::Data::now;
                     listQuery.clear();
 
-                    // Extract data from vector for binding into query
-                    boost::any currentValue;
-                    switch( listType )
+                    BindableAnyWrapper* bindable;
+                    size_t max = GetBoostAnyVectorSize( property->GetValue() );
+                    for( size_t index = 0; index < max; ++index )
                     {
-                    case INTEGER:
-                    {
-                        std::vector<int> vec = property->extract< std::vector< int > >();
-                        currentValue = vec.at( index );
-                        break;
-                    }
-                    case FLOAT:
-                    {
-                        std::vector<float> vec = property->extract< std::vector< float > >();
-                        currentValue = vec.at( index );
-                        break;
-                    }
-                    case DOUBLE:
-                    {
-                        std::vector<double> vec = property->extract< std::vector< double > >();
-                        currentValue = vec.at( index );
-                        break;
-                    }
-                    case STRING:
-                    {
-                        std::vector<std::string> vec = property->extract< std::vector< std::string > >();
-                        currentValue = vec.at( index );
-                        break;
-                    }
-                    case UNKNOWN:
-                    {
-                        break;
-                    }
-                    }
+                        // Build up query:
+                        // INSERT INTO [newTableName]
+                        // ([fieldName],PropertySetParentID) VALUES (:num,[mID])
+                        listQuery += "INSERT INTO \"";
+                        listQuery += newTableName;
+                        listQuery += "\" (";
+                        listQuery += fieldName;
+                        listQuery += ",PropertySetParentID) VALUES (:";
+                        listQuery += boost::lexical_cast<std::string > ( index );
+                        listQuery += ",";
+                        //listQuery += boost::lexical_cast<std::string > ( mID );
+                        listQuery += "\"";
+                        listQuery += uuidString;
+                        listQuery += "\"";
+                        listQuery += ")";
 
-                    // Bind the data and execute the statement if no binding errors
-                    bindable = new BindableAnyWrapper;
-                    bindVector.push_back( bindable );
-                    if( !bindable->BindValue( &listStatement, currentValue ) )
-                    {
-                        std::cout << "Error in binding data" << std::endl;
-                    }
-                    else
-                    {
-                        listStatement.execute();
+                        // Turn into a prepared statement that can accept bindings
+                        Poco::Data::Statement listStatement( session );
+                        listStatement << listQuery;
+                        listQuery.clear();
+
+                        // Extract data from vector for binding into query
+                        boost::any currentValue;
+                        switch( listType )
+                        {
+                        case INTEGER:
+                        {
+                            std::vector<int> vec = property->extract< std::vector< int > >();
+                            currentValue = vec.at( index );
+                            break;
+                        }
+                        case FLOAT:
+                        {
+                            std::vector<float> vec = property->extract< std::vector< float > >();
+                            currentValue = vec.at( index );
+                            break;
+                        }
+                        case DOUBLE:
+                        {
+                            std::vector<double> vec = property->extract< std::vector< double > >();
+                            currentValue = vec.at( index );
+                            break;
+                        }
+                        case STRING:
+                        {
+                            std::vector<std::string> vec = property->extract< std::vector< std::string > >();
+                            currentValue = vec.at( index );
+                            break;
+                        }
+                        case UNKNOWN:
+                        {
+                            break;
+                        }
+                        }
+
+                        // Bind the data and execute the statement if no binding errors
+                        bindable = new BindableAnyWrapper;
+                        bindVector.push_back( bindable );
+                        if( !bindable->BindValue( &listStatement, currentValue ) )
+                        {
+                            std::cout << "Error in binding data" << std::endl;
+                        }
+                        else
+                        {
+                            listStatement.execute();
+                        }
                     }
                 }
             }
+            ++it;
         }
-        ++it;
+        // Close the db transaction
+        session.commit();
+        dbLock.unlock();
     }
-    // Close the db transaction
-    session.commit();
+    else
+    {
+        throw std::runtime_error( "Unable to obtain lock while writing list data in SQLiteStore::_SaveImpl" );
+    }
+
 
     { // Braces protect scoping of biterator
         std::vector< BindableAnyWrapper* >::iterator biterator =
@@ -563,6 +610,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
 
     // Need to have explicitly named variables if we want to be able to bind
     // with Poco::Data
@@ -786,11 +835,18 @@ void SQLiteStore::Remove( Persistable& persistable, Role )
         Poco::Data::Session session( m_pool->get() );
         session.setProperty( "maxRetryAttempts", 4 );
         session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+        session.setProperty( "maxRetrySleep", 100 );
+        session.setProperty( "minRetrySleep", 50 );
         try
         {
-            session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
-                Poco::Data::use( idString ),
-                Poco::Data::now;
+            if( dbLock.tryLock( 500 ) )
+            {
+                session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
+                    Poco::Data::use( idString ),
+                    Poco::Data::now;
+                dbLock.unlock();
+            }
+
         }
         catch( Poco::Data::DataException &e )
         {
@@ -823,6 +879,8 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
     try
     {
         session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
@@ -857,6 +915,8 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
     Poco::Data::Statement statement( session );
 
     statement << "SELECT uuid FROM " << typeName, Poco::Data::into( resultIDs );
@@ -946,6 +1006,8 @@ void SQLiteStore::Search( const std::string& typeName,
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
     Poco::Data::Statement statement( session );
     statement << "SELECT " << returnField << " FROM \"" << typeName << "\"";
     if( !wherePredicate.empty() )
@@ -1002,10 +1064,18 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     // is found in the database.
     try
     {
-        session << "SELECT 1 FROM sqlite_master WHERE name=:name",
-            Poco::Data::into( tableExists ),
-            Poco::Data::use( TableName ),
-            Poco::Data::now;
+        if( dbLock.tryLock( 500 ) )
+        {
+            session << "SELECT 1 FROM sqlite_master WHERE name=:name",
+                Poco::Data::into( tableExists ),
+                Poco::Data::use( TableName ),
+                Poco::Data::now;
+            dbLock.unlock();
+        }
+        else
+        {
+            throw std::runtime_error( "Unable to acquire lock in SQLiteStore::_tableExists" );
+        }
     }
     catch( Poco::Data::DataException &e )
     {
@@ -1159,6 +1229,8 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
 
     if( _tableExists( session, typeName ) )
     {

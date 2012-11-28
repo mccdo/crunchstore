@@ -24,6 +24,7 @@
 #include <Poco/Data/SQLite/SQLite.h>
 #include <Poco/Data/Session.h>
 #include <Poco/Data/SessionPool.h>
+#include <Poco/Mutex.h>
 
 namespace crunchstore
 {
@@ -118,6 +119,8 @@ private:
     /// Signal registered as "DatabaseManager.ResyncFromDatabase" that is
     /// emitted during calls to LoadFrom.
     //boost::signals2::signal< void() > m_resyncFromDatabase;
+
+    Poco::Mutex dbLock;
 };
 
 } // namespace crunchstore
