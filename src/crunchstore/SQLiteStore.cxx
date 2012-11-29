@@ -95,7 +95,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
     session.setProperty( "minRetrySleep", 50 );
     try
     {
-        if( dbLock.tryLock( 500 ) )
+        if( dbLock.tryLock( 2000 ) )
         {
             session << "SELECT 1 FROM sqlite_master WHERE name='" << typeName << "'",
                 Poco::Data::into( exists ),
@@ -164,7 +164,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         return;// false;
     }
 
-    // These two don't get used until about 150 lines down, but need to befcatc
+    // These two don't get used until about 150 lines down, but need to be
     // declared outside the try{} block so memory can be properly cleaned
     // up in case of an exception during writing to database
     // Stores bindable wrappers for later deletion
@@ -178,16 +178,16 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             std::string columnHeaderString = _buildColumnHeaderString( persistable );
             Poco::Data::Statement sm( session );
             sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
-            if( dbLock.tryLock( 500 ) )
+            if( dbLock.tryLock( 2000 ) )
             {
                 sm.execute();
+                dbLock.unlock();
             }
             else
             {
                 std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
                 return;
             }
-            dbLock.unlock();
         }
 
         // Determine whether a record already exists for this PropertySet.
@@ -360,14 +360,14 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
 
         //std::cout << statement.toString() << std::endl;
 
-        if( dbLock.tryLock( 500 ) )
+        if( dbLock.tryLock( 2000 ) )
         {
             statement.execute();
             dbLock.unlock();
         }
         else
         {
-            throw std::runtime_error( "Unable to obtain lock while writing data in SQLiteStore::_SaveImpl" );
+            throw std::runtime_error( "Unable to obtain lock while writing data in SQLiteStore::SaveImpl" );
         }
 
         // If we've made it here, we successfully wrote to database
@@ -405,7 +405,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     // happen very quickly. Failure to use a transaction in this instance
     // will cause lists to take roughly .25 seconds *per item*. With a transaction,
     // 10,000 items can be inserted or updated in ~1 second.
-    if( dbLock.tryLock( 500 ) )
+    if( dbLock.tryLock( 2000 ) )
     {
         session.begin();
         DatumPtr property;
@@ -839,7 +839,7 @@ void SQLiteStore::Remove( Persistable& persistable, Role )
         session.setProperty( "minRetrySleep", 50 );
         try
         {
-            if( dbLock.tryLock( 500 ) )
+            if( dbLock.tryLock( 2000 ) )
             {
                 session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
                     Poco::Data::use( idString ),
@@ -1064,7 +1064,7 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     // is found in the database.
     try
     {
-        if( dbLock.tryLock( 500 ) )
+        if( dbLock.tryLock( 2000 ) )
         {
             session << "SELECT 1 FROM sqlite_master WHERE name=:name",
                 Poco::Data::into( tableExists ),
