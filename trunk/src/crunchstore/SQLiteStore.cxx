@@ -37,6 +37,7 @@
 
 #include <iostream>
 
+#define DB_LOCK_TIME 2000
 namespace crunchstore
 {
 
@@ -95,7 +96,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
     session.setProperty( "minRetrySleep", 50 );
     try
     {
-        if( dbLock.tryLock( 2000 ) )
+        if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
             session << "SELECT 1 FROM sqlite_master WHERE name='" << typeName << "'",
                 Poco::Data::into( exists ),
@@ -178,7 +179,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             std::string columnHeaderString = _buildColumnHeaderString( persistable );
             Poco::Data::Statement sm( session );
             sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
-            if( dbLock.tryLock( 2000 ) )
+            if( dbLock.tryLock( DB_LOCK_TIME ) )
             {
                 sm.execute();
                 dbLock.unlock();
@@ -360,7 +361,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
 
         //std::cout << statement.toString() << std::endl;
 
-        if( dbLock.tryLock( 2000 ) )
+        if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
             statement.execute();
             dbLock.unlock();
@@ -405,7 +406,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     // happen very quickly. Failure to use a transaction in this instance
     // will cause lists to take roughly .25 seconds *per item*. With a transaction,
     // 10,000 items can be inserted or updated in ~1 second.
-    if( dbLock.tryLock( 2000 ) )
+    if( dbLock.tryLock( DB_LOCK_TIME ) )
     {
         session.begin();
         DatumPtr property;
@@ -839,7 +840,7 @@ void SQLiteStore::Remove( Persistable& persistable, Role )
         session.setProperty( "minRetrySleep", 50 );
         try
         {
-            if( dbLock.tryLock( 2000 ) )
+            if( dbLock.tryLock( DB_LOCK_TIME ) )
             {
                 session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
                     Poco::Data::use( idString ),
@@ -1064,7 +1065,7 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     // is found in the database.
     try
     {
-        if( dbLock.tryLock( 2000 ) )
+        if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
             session << "SELECT 1 FROM sqlite_master WHERE name=:name",
                 Poco::Data::into( tableExists ),
