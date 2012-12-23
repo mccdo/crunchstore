@@ -63,10 +63,12 @@ bool DataAbstractionLayer::HasIDForTypename( const boost::uuids::uuid& id,
     return m_child->HasIDForTypename( id, typeName, role );
 }
 ////////////////////////////////////////////////////////////////////////////////
-void DataAbstractionLayer::GetIDsForTypename( const std::string& typeName, std::vector< std::string >& resultIDs )
+void DataAbstractionLayer::GetIDsForTypename( const std::string& typeName,
+                                          std::vector< std::string >& resultIDs,
+                                          Role role )
 {
     if( m_child )
-        m_child->GetIDsForTypename( typeName, resultIDs );
+        m_child->GetIDsForTypename( typeName, resultIDs, role );
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataAbstractionLayer::Search( const std::string& typeName,

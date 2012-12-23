@@ -166,8 +166,8 @@ void Multiplexer::Remove( Persistable& persistable, Role role )
 }
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::GetIDsForTypename( const std::string& typeName,
-                                               std::vector< std::string >& resultIDs,
-                                               Role role )
+                                     std::vector< std::string >& resultIDs,
+                                     Role role )
 {
     switch( role )
     {

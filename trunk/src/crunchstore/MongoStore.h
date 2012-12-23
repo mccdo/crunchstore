@@ -53,7 +53,8 @@ public:
     virtual bool HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName );
 
     virtual void GetIDsForTypename( const std::string& typeName,
-                                    std::vector< std::string >& resultIDs );
+                                    std::vector< std::string >& resultIDs,
+                                    Role role = DEFAULT_ROLE );
 
     virtual void Search( const std::string& typeName,
                          std::vector< SearchCriterion >& criteria,

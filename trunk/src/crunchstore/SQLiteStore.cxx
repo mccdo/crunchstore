@@ -905,7 +905,8 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::GetIDsForTypename( const std::string& typeName,
-                                std::vector< std::string >& resultIDs )
+                                     std::vector< std::string >& resultIDs,
+                                     Role )
 {
     //std::cout << "SQLiteStore::GetIDsForTypename" << std::endl << std::flush;
     if( !m_pool )

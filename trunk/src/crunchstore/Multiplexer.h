@@ -38,7 +38,7 @@ public:
     virtual void Remove( Persistable& persistable, Role role );
     virtual void GetIDsForTypename( const std::string& typeName,
                                     std::vector< std::string >& resultIDs,
-                                    Role role );
+                                    Role role = DEFAULT_ROLE );
     virtual void Search( const std::string& typeName,
                          std::vector< SearchCriterion >& criteria,
                          const std::string& returnField,
