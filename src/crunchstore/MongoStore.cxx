@@ -282,7 +282,8 @@ bool MongoStore::HasIDForTypename( const boost::uuids::uuid& id,
 }
 ////////////////////////////////////////////////////////////////////////////////
 void MongoStore::GetIDsForTypename( const std::string& typeName,
-                                std::vector< std::string >& resultIDs )
+                                    std::vector< std::string >& resultIDs,
+                                    Role )
 {
     std::string dbNamespace = "ves.";
     dbNamespace += typeName;
