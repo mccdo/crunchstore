@@ -21,7 +21,10 @@
 
 #include <string>
 #include <boost/any.hpp>
+#include <crunchstore/CompilerGuards.h>
+DIAG_OFF(unused-parameter)
 #include <Poco/Data/BLOB.h>
+DIAG_ON(unused-parameter)
 
 namespace Poco
 {
