@@ -4,7 +4,7 @@
 #    )
     
 #Lets us address our internal includes as <Persistence/foo.h>
-include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
 ADD_DEFINITIONS(-DCRUNCHSTORE_LIBRARY)
 
@@ -19,7 +19,7 @@ set(VES_PUBLIC_HEADERS ${hdrs} )
 
 set(VES_TARGET_NAME crunchstore)
 set(VES_TARGET_VERSION ${crunchstore_VERSION})
-set(VES_TARGET_EXPORT ${CMAKE_PROJECT_NAME}-targets)
+set(VES_TARGET_EXPORT ${PROJECT_NAME}-targets)
 set(VES_TARGET_CATEGORY Lib)
 
 ADD_LIBRARY(${VES_TARGET_NAME} SHARED ${srcs} ${VES_PUBLIC_HEADERS})
