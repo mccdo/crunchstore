@@ -11,8 +11,10 @@ set(crunchstore_VERSION ${crunchstore_MAJOR_VERSION}.${crunchstore_MINOR_VERSION
 set(VES_PACKAGE_VERSION ${crunchstore_VERSION})
 
 #Set the include directory so that crunchstore can be used as a sub project
-set(crunchstore_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" PARENT_SCOPE)
-set(crunchstore_LIBRARIES "crunchstore" PARENT_SCOPE)
+if( NOT(${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME}) )
+    set(crunchstore_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" PARENT_SCOPE)
+    set(crunchstore_LIBRARIES "crunchstore" PARENT_SCOPE)
+endif()
 
 set(POCO_ROOT "Please specify" CACHE PATH "Root directory where POCO is installed" )
 FIND_PACKAGE(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoData PocoDataSQLite)
