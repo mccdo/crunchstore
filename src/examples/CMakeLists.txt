@@ -4,9 +4,7 @@
 #    )
     
 #Lets us address our internal includes as <crunchstore/foo.h>
-include_directories(
-        ${CMAKE_SOURCE_DIR}/src
-    )
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
 set( srcs main.cxx )
 
