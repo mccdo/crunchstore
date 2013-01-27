@@ -17,7 +17,7 @@ if( NOT(${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME}) )
 endif()
 
 set(POCO_ROOT "Please specify" CACHE PATH "Root directory where POCO is installed" )
-FIND_PACKAGE(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoData PocoDataSQLite)
+find_package(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoData PocoDataSQLite)
 
 # should we build in mongoDB support?
 #option(USE_MONGO "Build mongoDB adapter?" ON)
@@ -30,7 +30,7 @@ set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 
 set( BOOST_ROOT "Please specify" CACHE PATH "Root directory where Boost is installed" )
-FIND_PACKAGE(Boost 1.44.0 REQUIRED COMPONENTS system)
+find_package(Boost 1.44.0 REQUIRED COMPONENTS system)
 
 find_package( MongoDB )
 
