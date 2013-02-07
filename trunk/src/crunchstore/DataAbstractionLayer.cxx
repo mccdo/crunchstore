@@ -36,13 +36,17 @@ DataAbstractionLayer::~DataAbstractionLayer()
 void DataAbstractionLayer::Save( const Persistable& persistable, Role role  )
 {
     if( m_child )
+    {
         m_child->Save( persistable, role );
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataAbstractionLayer::Load( Persistable& persistable, Role role )
 {
     if( m_child )
+    {
         m_child->Load( persistable, role );
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataAbstractionLayer::Remove( Persistable& persistable,
