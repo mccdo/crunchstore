@@ -339,7 +339,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         std::vector<std::string>::iterator it = fieldNames.begin();
         while( it != fieldNames.end() )
         {
-            std::string currentFieldName = ( *it );
+            const std::string currentFieldName = ( *it );
             //property = mPropertyMap[ currentFieldName ];
             property = persistable.GetDatum( currentFieldName );
 
@@ -674,7 +674,6 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
             Poco::DynamicAny value = recordset[index];
             Poco::Data::MetaColumn::ColumnDataType dataType = recordset.columnType( index );
             std::string columnName = recordset.columnName( index );
-
             switch( dataType )
             {
             case Poco::Data::MetaColumn::FDT_BOOL: // Never gets used by SQLite
@@ -860,7 +859,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
                                     const std::string& typeName,
                                     Role )
 {
-    //std::cout << "SQLiteStore::HasIDForTypename" << std::endl << std::flush;
+    //std::cout << "SQLiteStore::HasIDForTypename " << typeName << std::endl << std::flush;
     if( !m_pool )
     {
         return false;
@@ -894,8 +893,11 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
         std::cout << "SQLiteStore::HasIDForTypename: " << e.displayText() << std::endl;
     }
 
+
     if( idTest.empty() )
     {
+        std::cout << "SQLiteStore::HasIDForTypename: The uuid "
+            << idString << " for this " << typeName << " may not be valid." << std::endl;
         return false;
     }
     else
