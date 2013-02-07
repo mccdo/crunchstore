@@ -92,7 +92,8 @@ void Multiplexer::Load( Persistable& persistable, Role role )
     }
     case BACKING_ROLE:
     {
-        std::cout << "Multiplexer::Load: Falling back to the BACKING_ROLE." << std::endl;
+        std::cout << "Multiplexer::Load: Falling back to the BACKING_ROLE for persistable "
+            << persistable.GetTypeName() << std::endl;
         // Find out which store contains this persistable and load from there.
         // TODO: Should we be caching locations of IDs on load?
         const boost::uuids::uuid id = persistable.GetUUID();
