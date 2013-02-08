@@ -20,6 +20,8 @@
 #include <crunchstore/Multiplexer.h>
 #include <crunchstore/Persistable.h>
 
+#include <iostream>
+
 namespace crunchstore
 {
 
