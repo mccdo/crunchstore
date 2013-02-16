@@ -38,12 +38,15 @@
 #include <iostream>
 
 #define DB_LOCK_TIME 2000
+
 namespace crunchstore
 {
 
 SQLiteStore::SQLiteStore():
-            m_pool(0)
+            m_pool(0),
+            m_logger( Poco::Logger::get("Crunchstore::SQLiteStore") )
 {
+    m_logStream = LogStreamPtr( new Poco::LogStream( m_logger ) );
     //std::cout << "SQL: " << this << std::endl << std::flush;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -88,32 +91,13 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
         return false;
     }
 
-    bool exists = false;
     Poco::Data::Session session( m_pool->get() );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
     session.setProperty( "maxRetrySleep", 100 );
     session.setProperty( "minRetrySleep", 50 );
-    try
-    {
-        if( dbLock.tryLock( DB_LOCK_TIME ) )
-        {
-            session << "SELECT 1 FROM sqlite_master WHERE name='" << typeName << "'",
-                Poco::Data::into( exists ),
-                Poco::Data::now;
-            dbLock.unlock();
-        }
-        else
-        {
-            throw std::runtime_error( "Unable to obtain lock in SQLiteStore::HasTypeName" );
-        }
-    }
-    catch( Poco::Data::DataException &e )
-    {
-        std::cout << "SQLiteStore::HasTypename: " << e.displayText() << std::endl;
-        exists = false;
-    }
-    return exists;
+
+    return _tableExists( session, typeName );
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Detach()
@@ -376,16 +360,16 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     }
     catch( Poco::Data::DataException &e )
     {
-        std::cout << "SQLiteStore::SaveImpl: " << e.displayText() << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: " << e.displayText() );
     }
     catch( std::runtime_error &e )
     {
-        std::cout << "SQLiteStore::SaveImpl: " << e.what() << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: " << e.what() );
     }
 
     catch( ... )
     {
-        std::cout << "SQLiteStore::SaveImpl: Unspecified error when writing to database." << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: Unspecified error when writing to database." );
     }
 
     // Delete the BindableAnyWrapperS that were created in the binding loop
@@ -563,7 +547,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                         bindVector.push_back( bindable );
                         if( !bindable->BindValue( &listStatement, currentValue ) )
                         {
-                            std::cout << "Error in binding data" << std::endl;
+                            CRUNCHSTORE_LOG_ERROR( "Error in binding data" );
                         }
                         else
                         {
@@ -593,11 +577,6 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             ++biterator;
         }
     }
-// TODO: need to add something of this to Persistable interface
-//    m_writeDirty = false;
-//    m_liveWriteDirty = false;
-
-    //return returnVal;
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::LoadImpl( Persistable& persistable, Role )
@@ -626,8 +605,6 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
     }
 
     // Get the entire record we need with one query
-    //mID = ID;
-
     Poco::Data::Statement statement( session );
     statement << "SELECT * FROM \"" << tableName << "\" WHERE uuid=:0", Poco::Data::use( uuidString );
     try
@@ -636,7 +613,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
     }
     catch( Poco::Data::DataException &e )
     {
-        std::cout << "SQLiteStore::LoadImpl: " << e.displayText() << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::LoadImpl: " << e.displayText() );
     }
 
     Poco::Data::RecordSet recordset( statement );
@@ -715,7 +692,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
                 break;
             }
             default:
-                std::cout << "Didn't find conversion type" << std::endl << std::flush;
+                //std::cout << "Didn't find conversion type" << std::endl << std::flush;
+                break;
             }
 
             if( !bValue.empty() )
@@ -750,7 +728,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
             }
             catch( Poco::Data::DataException &e )
             {
-                std::cout << "SQLiteStore::LoadImpl_vectorized: " << e.displayText() << std::endl;
+                CRUNCHSTORE_LOG_ERROR( "SQLiteStore::LoadImpl_vectorized: " << e.displayText() );
             }
             Poco::Data::RecordSet recordset( statement );
             //std::cout << fieldName << " " << mTableName << " " << iterator->first << std::endl;
@@ -850,7 +828,7 @@ void SQLiteStore::Remove( Persistable& persistable, Role )
         }
         catch( Poco::Data::DataException &e )
         {
-            std::cout << "SQLiteStore::Remove: " << e.displayText() << std::endl;
+            CRUNCHSTORE_LOG_ERROR( "SQLiteStore::Remove: " << e.displayText() );
         }
     }
 }
@@ -865,7 +843,13 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
         return false;
     }
 
-    if( !HasTypeName( typeName ) )
+    Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
+    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
+
+    if( !_tableExists( session, typeName ) )
     {
         //std::cout << "Don't even have typename " << typeName << std::endl << std::flush;
         return false;
@@ -876,11 +860,6 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
     std::string idString = boost::lexical_cast< std::string >( id );
     //std::cout << "SQLiteStore::HasIDForTypename id = " << idString << std::endl << std::flush;
 
-    Poco::Data::Session session( m_pool->get() );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
     try
     {
         session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
@@ -890,7 +869,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
     }
     catch( Poco::Data::DataException &e )
     {
-        std::cout << "SQLiteStore::HasIDForTypename: " << e.displayText() << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::HasIDForTypename: " << e.displayText() );
     }
 
 
@@ -930,7 +909,7 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     }
     catch( Poco::Data::DataException &e )
     {
-        std::cout << "SQLiteStore::GetIDsForTypename: " << e.displayText() << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::GetIDsForTypename: " << e.displayText() );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -945,11 +924,18 @@ void SQLiteStore::Search( const std::string& typeName,
         return;
     }
 
-    if( !HasTypeName( typeName ) )
+    Poco::Data::Session session( m_pool->get() );
+    session.setProperty( "maxRetryAttempts", 4 );
+    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
+
+    if( !_tableExists( session, typeName ) )
     {
         //std::cout << "SQLiteStore::Search: Error: No table named " << typeName << std::endl << std::flush;
         return;
     }
+
     // For now, we only treat a single keyvalue criterion. More advanced processing
     // can be added later.
     std::string wherePredicate;
@@ -1007,11 +993,6 @@ void SQLiteStore::Search( const std::string& typeName,
         }
     }
 
-    Poco::Data::Session session( m_pool->get() );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
     Poco::Data::Statement statement( session );
     statement << "SELECT " << returnField << " FROM \"" << typeName << "\"";
     if( !wherePredicate.empty() )
@@ -1042,7 +1023,7 @@ void SQLiteStore::Search( const std::string& typeName,
     }
     catch( Poco::Data::DataException &e )
     {
-        std::cout << "SQLiteStore::Search: " << e.displayText() << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::Search: " << e.displayText() );
     }
 
     std::vector< BindableAnyWrapper* >::iterator biterator =
@@ -1070,7 +1051,7 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     {
         if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
-            session << "SELECT 1 FROM sqlite_master WHERE name=:name",
+            session << "SELECT 1 FROM sqlite_master WHERE type='table' AND name=:name",
                 Poco::Data::into( tableExists ),
                 Poco::Data::use( TableName ),
                 Poco::Data::now;
@@ -1083,7 +1064,7 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     }
     catch( Poco::Data::DataException &e )
     {
-        std::cout << "SQLiteStore::_tableExists: " << e.displayText() << std::endl;
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::_tableExists: " << e.displayText() );
     }
 
     return tableExists;
@@ -1139,7 +1120,7 @@ std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistabl
         // One more test... if we have an empty boost::any, don't write it.
         if( (dataType != "UNKNOWN") && (property->GetValue().empty()) )
         {
-            std::cout << "Empty any looked like: " << dataType << std::endl;
+            CRUNCHSTORE_LOG_ERROR( "Empty any looked like: " << dataType );
             dataType = "UNKNOWN";
         }
 
@@ -1148,10 +1129,10 @@ std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistabl
             // This will cause the property to be skipped in db writes:
             dataType = "UNKNOWN";
 
-            std::cout << "Error: Property " << (*it) << " contains a"
+            CRUNCHSTORE_LOG_ERROR( "Error: Property " << (*it) << " contains a"
                     << " disallowed character. Allowed characters are digits"
                     << " 0-9, letters, and underscore. This property will not"
-                    << " be written to the database." << std::endl;
+                    << " be written to the database." );
         }
         // Put the property's name string in as the column name
         // If the property is of an unknown type, we skip it for now
@@ -1244,7 +1225,7 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
         }
         catch( Poco::Data::DataException &e )
         {
-            std::cout << "SQLiteStore::Drop: " << e.displayText() << std::endl;
+            CRUNCHSTORE_LOG_ERROR( "SQLiteStore::Drop: " << e.displayText() );
         }
     }
 }
