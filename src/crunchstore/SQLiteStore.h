@@ -21,6 +21,8 @@
 
 #include <crunchstore/Store.h>
 #include <crunchstore/SQLiteStorePtr.h>
+#include <crunchstore/Logging.h>
+
 #include <Poco/Data/SQLite/SQLite.h>
 #include <Poco/Data/Session.h>
 #include <Poco/Data/SessionPool.h>
@@ -122,6 +124,9 @@ private:
     //boost::signals2::signal< void() > m_resyncFromDatabase;
 
     Poco::Mutex dbLock;
+
+    Poco::Logger& m_logger;
+    LogStreamPtr m_logStream;
 };
 
 } // namespace crunchstore
