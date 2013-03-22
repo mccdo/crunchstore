@@ -279,7 +279,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                 // Check for a known type
                 if( ( property->IsBool() ) || ( property->IsDouble() ) ||
                         ( property->IsFloat() ) || ( property->IsInt() ) ||
-                        ( property->IsString() ) )
+                        ( property->IsString() ) || ( property->IsBLOB() ) )
                 {
                     // Skip the property if its name contains illegal characters
                     if( !_containsIllegalCharacter( *it ) )
