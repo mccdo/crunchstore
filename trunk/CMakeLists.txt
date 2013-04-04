@@ -17,7 +17,7 @@ if( NOT(${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME}) )
 endif()
 
 set(POCO_ROOT "Please specify" CACHE PATH "Root directory where POCO is installed" )
-find_package(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoData PocoDataSQLite)
+find_package(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoXML PocoData PocoDataSQLite)
 
 # should we build in mongoDB support?
 #option(USE_MONGO "Build mongoDB adapter?" ON)
