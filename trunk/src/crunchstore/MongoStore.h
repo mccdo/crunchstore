@@ -48,7 +48,8 @@ public:
       */
     virtual void Detach();
 
-    virtual void Remove( Persistable& persistable );
+    virtual void Remove( Persistable& persistable, Role role = DEFAULT_ROLE,
+                         TransactionKey& transactionKey = TransactionKey() );
 
     virtual bool HasIDForTypename( const boost::uuids::uuid& id, const std::string& typeName );
 
@@ -76,10 +77,12 @@ public:
 
 protected:
     virtual void SaveImpl( const Persistable& persistable,
-                           Role role = DEFAULT_ROLE  );
+                           Role role = DEFAULT_ROLE,
+                           TransactionKey& transactionKey = TransactionKey() );
 
     virtual void LoadImpl( Persistable& persistable,
-                           Role role = DEFAULT_ROLE );
+                           Role role = DEFAULT_ROLE,
+                           TransactionKey& transactionKey = TransactionKey() );
 
 private:
 

@@ -30,14 +30,14 @@ Multiplexer::Multiplexer()
     //std::cout << "MUX: " << this << std::endl << std::flush;
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Multiplexer::Save( const Persistable& persistable, Role role )
+void Multiplexer::Save( const Persistable& persistable, Role role, const TransactionKey& transactionKey )
 {
     if( role & WORKING_ROLE )
     {
         //std::cout << "Multiplexer::Save -- WORKING_ROLE" << std::endl;
         if( m_workingStore )
         {
-            m_workingStore->Save( persistable );
+            m_workingStore->Save( persistable, role, transactionKey );
         }
     }
 
@@ -47,7 +47,7 @@ void Multiplexer::Save( const Persistable& persistable, Role role )
         std::vector< DataAbstractionLayerPtr >::iterator it = m_backingStores.begin();
         while( it != m_backingStores.end() )
         {
-            (*it)->Save( persistable );
+            (*it)->Save( persistable, role, transactionKey );
             ++it;
         }
     }
@@ -56,24 +56,25 @@ void Multiplexer::Save( const Persistable& persistable, Role role )
     {
         //std::cout << "Multiplexer::Save -- VERSIONING_ROLE" << std::endl;
         if( m_fullVersioningStore )
-            m_fullVersioningStore->Save( persistable );
+            m_fullVersioningStore->Save( persistable, role, transactionKey );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Multiplexer::Load( Persistable& persistable, Role role )
+void Multiplexer::Load( Persistable& persistable, Role role,
+                        const TransactionKey& transactionKey )
 {
     switch( role )
     {
     case VERSIONING_ROLE:
     {
         if( m_fullVersioningStore )
-            m_fullVersioningStore->Load( persistable );
+            m_fullVersioningStore->Load( persistable, role, transactionKey );
         break;
     }
     case WORKING_ROLE:
     {
         if( m_workingStore )
-            m_workingStore->Load( persistable );
+            m_workingStore->Load( persistable, role, transactionKey );
         break;
     }
     case DEFAULT_ROLE:
@@ -86,7 +87,7 @@ void Multiplexer::Load( Persistable& persistable, Role role )
             // TODO: Should we be caching locations of IDs on load?
             if( m_workingStore->HasIDForTypename( id, persistable.GetTypeName() ) )
             {
-                m_workingStore->Load( persistable );
+                m_workingStore->Load( persistable, role, transactionKey );
                 break;
             }
         }
@@ -104,7 +105,7 @@ void Multiplexer::Load( Persistable& persistable, Role role )
         {
             if( (*it)->HasIDForTypename( id, persistable.GetTypeName() ) )
             {
-                (*it)->Load( persistable );
+                (*it)->Load( persistable, role, transactionKey );
                 break;
             }
             ++it;
@@ -118,20 +119,21 @@ void Multiplexer::Load( Persistable& persistable, Role role )
     } // switch( role )
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Multiplexer::Remove( Persistable& persistable, Role role )
+void Multiplexer::Remove( Persistable& persistable, Role role,
+                          const TransactionKey& transactionKey )
 {
     switch( role )
     {
     case VERSIONING_ROLE:
     {
         if( m_fullVersioningStore )
-            m_fullVersioningStore->Remove( persistable );
+            m_fullVersioningStore->Remove( persistable, role, transactionKey );
         break;
     }
     case WORKING_ROLE:
     {
         if( m_workingStore )
-            m_workingStore->Remove( persistable );
+            m_workingStore->Remove( persistable, role, transactionKey );
         break;
     }
     case DEFAULT_ROLE:
@@ -141,7 +143,7 @@ void Multiplexer::Remove( Persistable& persistable, Role role )
             const boost::uuids::uuid id = persistable.GetUUID();
             if( m_workingStore->HasIDForTypename( id, persistable.GetTypeName() ) )
             {
-                m_workingStore->Remove( persistable );
+                m_workingStore->Remove( persistable, role, transactionKey );
             }
         }
         // DEFAULT_ROLE always falls through to BACKING_ROLE
@@ -155,7 +157,7 @@ void Multiplexer::Remove( Persistable& persistable, Role role )
         {
             if( (*it)->HasIDForTypename( id, persistable.GetTypeName() ) )
             {
-                (*it)->Remove( persistable );
+                (*it)->Remove( persistable, role, transactionKey );
                 break;
             }
             ++it;

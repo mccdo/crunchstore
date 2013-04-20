@@ -22,6 +22,7 @@
 #include <crunchstore/ExportConfig.h>
 
 #include <crunchstore/BufferBase.h>
+#include <crunchstore/TransactionKey.h>
 
 namespace crunchstore
 {
@@ -42,7 +43,8 @@ public:
     /// 1. Call persistable.GetUUID() before you do anything else
     /// 2. Call m_child->Save( persistable, role ) to ensure that the save
     ///    call propagates up the chain to a buffer and a store.
-    virtual void Save( const Persistable& persistable, Role role = DEFAULT_ROLE );
+    virtual void Save( const Persistable& persistable, Role role = DEFAULT_ROLE,
+                       const TransactionKey& transactionKey = TransactionKey() );
 };
 
 } // namespace crunchstore

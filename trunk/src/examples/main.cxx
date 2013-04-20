@@ -45,11 +45,6 @@
 #else
 #include <crunchstore/MongoStore.h>
 #endif
-//#define USE_PROPERTYSETS
-#ifdef USE_PROPERTYSETS
-#include "PropertySet.h"
-#include "Property.h"
-#endif
 
 #include <boost/any.hpp>
 
@@ -107,35 +102,6 @@ int main(int argc, char *argv[])
         }
     }
 
-#ifdef USE_PROPERTYSETS
-    ves::xplorer::data::PropertySet ps;
-    cout << "Testing a propertySet..." << endl;
-    ps.SetTypeName( "TestPropertySet" );
-    ps.AddProperty( "Test", 99.9, "This is a ui label" );
-    // We can access the value the old way...
-    cout << "\tTwo ways to access value should yield same value..." << endl;
-    cout << "\t\tOld way: " << boost::any_cast< double >( ps.GetPropertyValue("Test") ) << endl;
-    // Or the new way through the base class's interface
-    cout << "\t\tNew way: " << ps.GetDatumValue< double >("Test") << endl << flush;
-
-    std::vector< std::string > enums;
-    enums.push_back( "Zero" );
-    enums.push_back( "One" );
-    enums.push_back( "Two" );
-    enums.push_back( "Three" );
-    ps.AddProperty( "ENUM", std::string("This value won't stay after the enum vector is set. It will revert to zero then."), "An Enumerated Value");
-    ps.SetPropertyAttribute( "ENUM", "enumValues", enums );
-
-    cout << "\tuiLabel: "
-         << ps.GetPropertyAttributeValue< std::string >( "Test", "uiLabel" ) << endl;
-    cout << "\tProperty name in set: "
-         << ps.GetPropertyAttributeValue< std::string >( "Test", "nameInSet" ) << endl;
-    cout << "\tENUM value: "
-         << ps.GetDatumValue< std::string >( "ENUM" ) << endl;
-    cout << "\tENUM index: "
-         << ps.GetPropertyAttributeValue< int >( "ENUM", "enumCurrentIndex" ) << endl;
-#endif
-
     // Set up a datamanager to test persistence
     DataManager manager;
     DataAbstractionLayerPtr cache( new NullCache );
@@ -156,50 +122,6 @@ int main(int argc, char *argv[])
     static_cast<MongoStore*>(mongostore.get())->SetStorePath("localhost");
     //manager.AttachStore( mongostore, Store::BACKINGSTORE_ROLE );
     manager.AttachStore( mongostore, Store::WORKINGSTORE_ROLE );
-#endif
-
- #ifdef USE_PROPERTYSETS
-    // This works for any type of store connected as WORKING_ROLE
-    //manager.Drop( "TestPropertySet" );
-
-    manager.Save( ps );
-    ps.SetDatumValue( "ENUM", std::string( "Three" ) );
-    manager.Load( ps );
-    cout << "\tAfter Load: " << ps.GetDatumValue< std::string >( "ENUM" ) << endl;
-
-    cout << "\tTesting search..." << endl;
-    std::string psUUID = ps.GetUUIDAsString();
-    std::vector< std::string > results;
-    SearchCriterion kvc( "Test", "=", 99.9 );
-    std::vector< SearchCriterion > criteria;
-    criteria.push_back( kvc );
-    manager.Search( "TestPropertySet", criteria, "uuid", results );
-    if( !results.empty() )
-    {
-        bool idFound = false;
-        for( size_t index = 0; index < results.size(); ++index )
-        {
-            cout << "\t\t" << results.at(index) << endl;
-            if( results.at(index) == psUUID )
-                idFound = true;
-        }
-        if( idFound )
-            cout << "\t...Search successful" << endl;
-        else
-            cout << "\t...Search returned wrong result" << endl;
-    }
-    else
-    {
-        cout << "\tSearch failed, or problem with search" << endl;
-    }
-
-    // If there are more than 5 entries in the TestPropertySet table, get rid
-    // of the table. This both tests the Drop functionality and makes search
-    // result sizes reasonable for these tests.
-    if( results.size() > 5 )
-    {
-        manager.Drop( "TestPropertySet" );
-    }
 #endif
 
     // Build up a persistable with some useful test types
@@ -229,11 +151,17 @@ int main(int argc, char *argv[])
 
     manager.Drop( "TestType" );
 
-    // Ensure that persistable is saved to backing as well as working dbs.
-    // Normally, persistables will just be saved to the working db, but there
-    // are cases when we may wish to explicitly place something in a backing
-    // store, so we test that here.
-    //cout << "Saving Persistable" << endl << flush;
+    manager.Save( q );
+
+    // BLOB problems
+    std::vector<char> blob2( 100, 'k' );
+    q.SetDatumValue( "ABlob", blob2 );
+
+    std::vector<char> bout2 = q.GetDatumValue<std::vector< char > >("ABlob");
+    char* pb2 = &(bout2[0]);
+    string bstr2( pb2, bout2.size() );
+    cout << "tooter: " << bstr2 << endl;
+
     manager.Save( q );
     //manager.Save( q, Store::BACKING_ROLE );
 

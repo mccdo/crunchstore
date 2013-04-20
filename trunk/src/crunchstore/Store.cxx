@@ -55,22 +55,33 @@ void Store::Detach()
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Store::Save( const Persistable& persistable, Role role  )
+void Store::Save( const Persistable& persistable, Role role,
+                  const TransactionKey& transactionKey  )
 {
-    SaveImpl( persistable, role );
+    SaveImpl( persistable, role, transactionKey );
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Store::Load( Persistable& persistable, Role role )
+void Store::Load( Persistable& persistable, Role role,
+                  const TransactionKey& transactionKey )
 {
-    LoadImpl( persistable, role );
+    LoadImpl( persistable, role, transactionKey );
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Store::SaveImpl( const Persistable&, Role  )
+//TransactionKey Store::BeginTransaction()
+//{
+//    return TransactionKey();
+//}
+////////////////////////////////////////////////////////////////////////////////
+void Store::EndTransaction( TransactionKey& )
+{
+}
+////////////////////////////////////////////////////////////////////////////////
+void Store::SaveImpl( const Persistable&, Role, const TransactionKey&  )
 {
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-void Store::LoadImpl( Persistable&, Role  )
+void Store::LoadImpl( Persistable&, Role, const TransactionKey&  )
 {
 
 }

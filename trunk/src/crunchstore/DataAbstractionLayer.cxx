@@ -33,27 +33,31 @@ DataAbstractionLayer::~DataAbstractionLayer()
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-void DataAbstractionLayer::Save( const Persistable& persistable, Role role  )
+void DataAbstractionLayer::Save( const Persistable& persistable, Role role,
+                                 const TransactionKey& transactionKey  )
 {
     if( m_child )
     {
-        m_child->Save( persistable, role );
+        m_child->Save( persistable, role, transactionKey );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-void DataAbstractionLayer::Load( Persistable& persistable, Role role )
+void DataAbstractionLayer::Load( Persistable& persistable,
+                                 Role role,
+                                 const TransactionKey& transactionKey )
 {
     if( m_child )
     {
-        m_child->Load( persistable, role );
+        m_child->Load( persistable, role, transactionKey );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataAbstractionLayer::Remove( Persistable& persistable,
-                                   Role role )
+                                   Role role,
+                                   const TransactionKey& transactionKey )
 {
     if( m_child )
-        m_child->Remove( persistable, role );
+        m_child->Remove( persistable, role, transactionKey );
 }
 ////////////////////////////////////////////////////////////////////////////////
 bool DataAbstractionLayer::HasIDForTypename( const boost::uuids::uuid& id,

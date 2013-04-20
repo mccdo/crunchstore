@@ -17,26 +17,30 @@
  * Boston, MA 02111-1307, USA.
  *
  *************** <auto-copyright.rb END do not edit this line> ***************/
-#include <crunchstore/Cache.h>
+#pragma once
+
+#include <crunchstore/ExportConfig.h>
+#include <crunchstore/TransactionKey.h>
+
+#include <Poco/Data/Session.h>
 
 namespace crunchstore
 {
-////////////////////////////////////////////////////////////////////////////////
-Cache::Cache()
-{
-}
-////////////////////////////////////////////////////////////////////////////////
-Cache::~Cache()
-{
-}
-////////////////////////////////////////////////////////////////////////////////
-void Cache::Save( const Persistable& persistable, Role role,
-                  const TransactionKey& transactionKey )
-{
-    persistable.GetUUID();
-    if( m_child )
-        m_child->Save( persistable, role, transactionKey );
-}
-////////////////////////////////////////////////////////////////////////////////
-}
 
+class CRUNCHSTORE_EXPORT SQLiteTransactionKey: public TransactionKey
+{
+public:
+    SQLiteTransactionKey( Poco::Data::Session& session );
+    virtual ~SQLiteTransactionKey();
+    virtual std::string GetTypeString() const{ return std::string("SQLite"); }
+
+    void SetSession( Poco::Data::Session& session );
+    Poco::Data::Session GetSession() const;
+    bool IsSet() const;
+
+private:
+    Poco::Data::Session m_session;
+    bool m_set;
+};
+
+} // namespace

@@ -122,7 +122,7 @@ void SQLiteStore::Detach()
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::SaveImpl( const Persistable& persistable,
-                   Role )
+                   Role, const TransactionKey& transactionKey )
 {
     //std::cout << "SQLiteStore::SaveImpl" << std::endl << std::flush;
     if( !m_pool )
@@ -130,7 +130,8 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         return;
     }
 
-    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session( GetSessionByKey( transactionKey ) );
+
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
     session.setProperty( "maxRetrySleep", 100 );
@@ -324,22 +325,10 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         while( it != fieldNames.end() )
         {
             const std::string currentFieldName = ( *it );
-            //property = mPropertyMap[ currentFieldName ];
             property = persistable.GetDatum( currentFieldName );
-
             bindable = new BindableAnyWrapper;
             bindableVector.push_back( bindable );
-  // !!! FIXME: This won't work since datum doesn't have attributes!
-            // Force enums to save their associated string value
-            /*if( ( property->IsEnum() ) )
-            {
-                bindable->BindValue( &statement, property->GetAttribute( "enumCurrentString" ) );
-            }
-            else
-            {*/
-                bindable->BindValue( &statement, property->GetValue() );
-            //}
-
+            bindable->BindValue( &statement, property->GetValue() );
             ++it;
         }
 
@@ -392,7 +381,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     // 10,000 items can be inserted or updated in ~1 second.
     if( dbLock.tryLock( DB_LOCK_TIME ) )
     {
-        session.begin();
+//123        session.begin();
         DatumPtr property;
         std::vector< std::string > dataList = persistable.GetDataList();
         std::vector< std::string >::const_iterator it = dataList.begin();
@@ -559,7 +548,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             ++it;
         }
         // Close the db transaction
-        session.commit();
+//123        session.commit();
         dbLock.unlock();
     }
     else
@@ -579,7 +568,8 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-void SQLiteStore::LoadImpl( Persistable& persistable, Role )
+void SQLiteStore::LoadImpl( Persistable& persistable, Role,
+                            const TransactionKey& transactionKey )
 {
     //std::cout << "SQLiteStore::LoadImpl" << std::endl << std::flush;
     if( !m_pool )
@@ -587,7 +577,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
         return;
     }
 
-    Poco::Data::Session session( m_pool->get() );
+//123    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session = GetSessionByKey( transactionKey );
     session.setProperty( "maxRetryAttempts", 4 );
     session.setProperty( "transactionMode", std::string("IMMEDIATE") );
     session.setProperty( "maxRetrySleep", 100 );
@@ -798,7 +789,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role )
 
 }
 ////////////////////////////////////////////////////////////////////////////////
-void SQLiteStore::Remove( Persistable& persistable, Role )
+void SQLiteStore::Remove( Persistable& persistable, Role,
+                          const TransactionKey& transactionKey )
 {
     //std::cout << "SQLiteStore::Remove" << std::endl << std::flush;
     if( !m_pool )
@@ -810,7 +802,8 @@ void SQLiteStore::Remove( Persistable& persistable, Role )
     if( HasIDForTypename( persistable.GetUUID(), persistable.GetTypeName() ) )
     {
         std::string idString = persistable.GetUUIDAsString();
-        Poco::Data::Session session( m_pool->get() );
+//123        Poco::Data::Session session( m_pool->get() );
+        Poco::Data::Session session = GetSessionByKey( transactionKey );
         session.setProperty( "maxRetryAttempts", 4 );
         session.setProperty( "transactionMode", std::string("IMMEDIATE") );
         session.setProperty( "maxRetrySleep", 100 );
@@ -1227,6 +1220,52 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
         {
             CRUNCHSTORE_LOG_ERROR( "SQLiteStore::Drop: " << e.displayText() );
         }
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+SQLiteTransactionKey SQLiteStore::BeginTransaction()
+{
+    CRUNCHSTORE_LOG_INFO( "Opening bulk mode on SQLiteStore" );
+    std::cout <<  "Opening bulk mode on SQLiteStore" << std::endl << std::flush;
+
+    Poco::Data::Session session( m_pool->get() );
+    session.begin();
+    SQLiteTransactionKey key( session );
+    return key;
+}
+////////////////////////////////////////////////////////////////////////////////
+void SQLiteStore::EndTransaction( TransactionKey& transactionKey )
+{
+    CRUNCHSTORE_LOG_INFO( "Closing bulk mode on SQLiteStore" );
+
+    if( SQLiteTransactionKey* d = dynamic_cast< SQLiteTransactionKey* >( &transactionKey ) )
+    {
+        Poco::Data::Session session( d->GetSession() );
+        session.commit();
+        session.close();
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transactionKey )
+{
+    if( transactionKey.GetTypeString() == "SQLite" )
+    {
+        SQLiteTransactionKey key = static_cast< const SQLiteTransactionKey& >( transactionKey );
+        if( key.IsSet() )
+        {
+            //std::cout << "Returning the saved session..." << std::flush;
+            return key.GetSession();
+        }
+        else
+        {
+            //std::cout << "Key not set..." << std::flush;
+            return m_pool->get();
+        }
+    }
+    else
+    {
+        //std::cout << "Wrong key type..." << transactionKey.GetTypeString() << std::flush;
+        return m_pool->get();
     }
 }
 ////////////////////////////////////////////////////////////////////////////////

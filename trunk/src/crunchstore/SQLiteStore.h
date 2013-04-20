@@ -22,6 +22,8 @@
 #include <crunchstore/Store.h>
 #include <crunchstore/SQLiteStorePtr.h>
 #include <crunchstore/Logging.h>
+#include <crunchstore/TransactionKey.h>
+#include <crunchstore/SQLiteTransactionKey.h>
 
 #include <Poco/Data/SQLite/SQLite.h>
 #include <Poco/Data/Session.h>
@@ -54,7 +56,8 @@ public:
       */
     virtual void Detach();
 
-    virtual void Remove( Persistable& persistable, Role role = DEFAULT_ROLE );
+    virtual void Remove( Persistable& persistable, Role role = DEFAULT_ROLE,
+                         const TransactionKey& = TransactionKey() );
 
     virtual bool HasIDForTypename( const boost::uuids::uuid& id,
                                    const std::string& typeName,
@@ -85,12 +88,18 @@ public:
     /// SessionPool when mySession goes out of scope.
     Poco::Data::SessionPool* GetPool();
 
+    SQLiteTransactionKey BeginTransaction();
+
+    virtual void EndTransaction( TransactionKey& transactionKey );
+
 protected:
     virtual void SaveImpl( const Persistable& persistable,
-                           Role role = DEFAULT_ROLE  );
+                           Role role = DEFAULT_ROLE,
+                           const TransactionKey& transactionKey = TransactionKey() );
 
     virtual void LoadImpl( Persistable& persistable,
-                           Role role = DEFAULT_ROLE );
+                           Role role = DEFAULT_ROLE,
+                           const TransactionKey& transactionKey = TransactionKey() );
 
 private:
 
@@ -112,6 +121,8 @@ private:
     bool _tableExists( Poco::Data::Session& session, const std::string& TableName );
 
     size_t GetBoostAnyVectorSize( const boost::any& value );
+
+    Poco::Data::Session GetSessionByKey( const TransactionKey& transactionKey );
 
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
