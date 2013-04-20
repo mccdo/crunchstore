@@ -22,6 +22,7 @@
 #include <crunchstore/DataAbstractionLayerPtr.h>
 #include <crunchstore/Persistable.h>
 #include <crunchstore/SearchCriterion.h>
+#include <crunchstore/TransactionKey.h>
 
 #include <crunchstore/ExportConfig.h>
 
@@ -43,13 +44,16 @@ public:
 
     /// Saves persistable to data store. Unless a version branch is specifically
     /// being tagged, role should be left to the default.
-    virtual void Save( const Persistable& persistable, Role role = DEFAULT_ROLE );
+    virtual void Save( const Persistable& persistable, Role role = DEFAULT_ROLE,
+                       const TransactionKey& transactionKey = TransactionKey() );
 
     /// Loads persistable from data store.
-    virtual void Load( Persistable& persistable, Role role = DEFAULT_ROLE );
+    virtual void Load( Persistable& persistable, Role role = DEFAULT_ROLE,
+                       const TransactionKey& transactionKey = TransactionKey() );
 
     /// Removes persistable from data store.
-    virtual void Remove( Persistable& persistable, Role role = DEFAULT_ROLE );
+    virtual void Remove( Persistable& persistable, Role role = DEFAULT_ROLE,
+                         const TransactionKey& transactionKey = TransactionKey() );
 
     /// Does this DAL object have a datum with this ID?
     virtual bool HasIDForTypename( const boost::uuids::uuid& id,

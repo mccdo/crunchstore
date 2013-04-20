@@ -85,7 +85,7 @@ void MongoStore::Detach()
 }
 ////////////////////////////////////////////////////////////////////////////////
 void MongoStore::SaveImpl( const Persistable& persistable,
-                   Role role )
+                   Role role, TransactionKey& transactionKey )
 {
     //std::cout << "MongoStore::SaveImpl" << std::endl << std::flush;
     mongo::BSONObjBuilder builder;
@@ -159,7 +159,8 @@ void MongoStore::SaveImpl( const Persistable& persistable,
                           true );
 }
 ////////////////////////////////////////////////////////////////////////////////
-void MongoStore::LoadImpl( Persistable& persistable, Role role )
+void MongoStore::LoadImpl( Persistable& persistable, Role role,
+                           TransactionKey& transactionKey )
 {
     //std::cout << "MongoStore::LoadImpl" << std::endl << std::flush;
     std::string dbNamespace = "ves.";
@@ -251,7 +252,8 @@ void MongoStore::LoadImpl( Persistable& persistable, Role role )
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-void MongoStore::Remove( Persistable& persistable )
+void MongoStore::Remove( Persistable& persistable, Role role,
+                         TransactionKey&  )
 {
     std::string dbNamespace = "ves.";
     dbNamespace += persistable.GetTypeName();

@@ -33,9 +33,12 @@ public:
 
     // Overrides of DataAbstractionLayer
     virtual void Save( const Persistable& persistable,
-                       Role role = DEFAULT_ROLE  );
-    virtual void Load( Persistable& persistable, Role role = DEFAULT_ROLE );
-    virtual void Remove( Persistable& persistable, Role role );
+                       Role role = DEFAULT_ROLE,
+                       const TransactionKey& transactionKey = TransactionKey() );
+    virtual void Load( Persistable& persistable, Role role = DEFAULT_ROLE,
+                       const TransactionKey& transactionKey = TransactionKey() );
+    virtual void Remove( Persistable& persistable, Role role,
+                         const TransactionKey& transactionKey = TransactionKey() );
     virtual void GetIDsForTypename( const std::string& typeName,
                                     std::vector< std::string >& resultIDs,
                                     Role role = DEFAULT_ROLE );

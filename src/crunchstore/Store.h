@@ -65,21 +65,33 @@ public:
 
     /// Override from DataAbstractionLayer. This method must not be overridden
     /// by derived classes, which should instead override SaveImpl.
-    void Save( const Persistable& persistable, Role role = DEFAULT_ROLE  );
+    void Save( const Persistable& persistable, Role role = DEFAULT_ROLE,
+               const TransactionKey& transactionKey = TransactionKey()  );
 
     /// Override from DataAbstractionLayer. This method must not be overridden
     /// by derived classes, which should instead override LoadImpl.
-    void Load( Persistable& persistable, Role role = DEFAULT_ROLE );
+    void Load( Persistable& persistable, Role role = DEFAULT_ROLE,
+               const TransactionKey& transactionKey = TransactionKey() );
+
+    /// Begins a bulk transaction with the store. Returns a transaction key that
+    /// must be passed along with any Load, Save, or Remove operation that
+    /// should be part of this bulk transaction.
+    //virtual TransactionKey BeginTransaction();
+
+    /// End the bulk transaction associated with @c transactionKey.
+    virtual void EndTransaction( TransactionKey& transactionKey );
 
 
 protected:
     /// Derived classes should override this to do their actual save operation
     virtual void SaveImpl( const Persistable& persistable,
-                           Role role = DEFAULT_ROLE  );
+                           Role role = DEFAULT_ROLE,
+                           const TransactionKey& transactionKey = TransactionKey()  );
 
     /// Derived classes should override this to do their actual load operation
     virtual void LoadImpl( Persistable& persistable,
-                           Role role = DEFAULT_ROLE );
+                           Role role = DEFAULT_ROLE,
+                           const TransactionKey& transactionKey = TransactionKey() );
 
 private:
     StoreRole m_storeRole;

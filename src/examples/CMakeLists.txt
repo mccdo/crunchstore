@@ -9,14 +9,27 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 set( srcs main.cxx )
 
 SET(TARGET_SRC ${srcs})
-#SET(PUBLIC_HEADERS ${hdrs})
 
 SET(TARGET_NAME crunchstoreTest)
 ADD_EXECUTABLE(${TARGET_NAME} ${TARGET_SRC})
 TARGET_LINK_LIBRARIES(${TARGET_NAME} crunchstore ${MONGO_DRIVER_LIBS} ${Boost_LIBRARIES})
 
+SET(INSTALL_BINDIR bin)
 
-#SET(INSTALL_INCDIR include)
+INSTALL(
+        TARGETS ${TARGET_NAME}
+        RUNTIME DESTINATION ${INSTALL_BINDIR}
+    )
+
+###############################################################################
+set( srcs bulk.cxx )
+
+SET(TARGET_SRC ${srcs})
+
+SET(TARGET_NAME bulkTest)
+ADD_EXECUTABLE(${TARGET_NAME} ${TARGET_SRC})
+TARGET_LINK_LIBRARIES(${TARGET_NAME} crunchstore ${MONGO_DRIVER_LIBS} ${Boost_LIBRARIES})
+
 SET(INSTALL_BINDIR bin)
 
 INSTALL(
