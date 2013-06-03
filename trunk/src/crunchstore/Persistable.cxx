@@ -55,10 +55,15 @@ Persistable::Persistable( const std::string& typeName ):
 ////////////////////////////////////////////////////////////////////////////////
 Persistable::Persistable( const Persistable& orig ):
         m_dataList( orig.m_dataList ),
-        m_UUID( orig.m_UUID ),
-        m_UUIDString( orig.m_UUIDString ),
         m_typename( orig.m_typename )
 {
+    // Since we use lazy generation of UUIDs, we have to ensure that a unique
+    // one has been generated before doing a copy; otherwise, if no call has
+    // been made to generate a UUID on the original, the copy and the original
+    // will end up with different UUIDs.
+    m_UUID = orig.GetUUID();
+    m_UUIDString = orig.m_UUIDString;
+    m_uuidSet = orig.m_uuidSet;
     // Since DataMap holds smart pointers to instances of Datum, we have to
     // create new instances of the underlying Datum
     DataMap::const_iterator it = orig.m_dataMap.begin();
