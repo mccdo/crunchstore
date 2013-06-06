@@ -30,7 +30,16 @@
 
 #include <Poco/Data/SQLite/Connector.h>
 #include <Poco/Data/RecordSet.h>
-#include <Poco/Data/BLOB.h>
+DIAG_OFF(unused-parameter)
+#include <Poco/Version.h>
+#if POCO_VERSION > 01050000
+    #include <Poco/Data/LOB.h>
+    #define POCO_KEYWORD_NAMESPACE Poco::Data::Keywords::
+#else
+    #include <Poco/Data/BLOB.h>
+    #define POCO_KEYWORD_NAMESPACE Poco::Data::
+#endif
+DIAG_ON(unused-parameter)
 
 #include <stdexcept>
 
@@ -182,9 +191,9 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         std::string idTest;
 
         session << "SELECT uuid FROM \"" << tableName << "\" WHERE uuid=:uuid",
-                Poco::Data::into( idTest ),
-                Poco::Data::use( uuidString ),
-                Poco::Data::now;
+                POCO_KEYWORD_NAMESPACE into( idTest ),
+                POCO_KEYWORD_NAMESPACE use( uuidString ),
+                POCO_KEYWORD_NAMESPACE now;
 
         // Since the data binding part will be the same for INSERT and UPDATE
         // operations on this Persistable, we only need to build the string part
@@ -444,7 +453,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                     {
                         session << "CREATE TABLE \"" << newTableName <<
                                 "\" (id INTEGER PRIMARY KEY,PropertySetParentID TEXT,"
-                                << fieldName << " " << columnType << ")", Poco::Data::now;
+                                << fieldName << " " << columnType << ")", POCO_KEYWORD_NAMESPACE now;
                     }
 
                     // First part of query will delete everything from the sub-table
@@ -469,7 +478,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                     listQuery += uuidString;
                     listQuery += "\"";
 
-                    session << listQuery, Poco::Data::now;
+                    session << listQuery, POCO_KEYWORD_NAMESPACE now;
                     listQuery.clear();
 
                     BindableAnyWrapper* bindable;
@@ -597,7 +606,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
 
     // Get the entire record we need with one query
     Poco::Data::Statement statement( session );
-    statement << "SELECT * FROM \"" << tableName << "\" WHERE uuid=:0", Poco::Data::use( uuidString );
+    statement << "SELECT * FROM \"" << tableName << "\" WHERE uuid=:0", POCO_KEYWORD_NAMESPACE use( uuidString );
     try
     {
         statement.execute();
@@ -712,7 +721,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
             Poco::Data::Statement statement( session );
             statement << "SELECT " << fieldName << " FROM \"" << persistable.GetTypeName()
                     << "_" << *it << "\" WHERE PropertySetParentID=:0"
-                    , Poco::Data::use( mUUIDString );
+                    , POCO_KEYWORD_NAMESPACE use( mUUIDString );
             try
             {
                 statement.execute();
@@ -813,8 +822,8 @@ void SQLiteStore::Remove( Persistable& persistable, Role,
             if( dbLock.tryLock( DB_LOCK_TIME ) )
             {
                 session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
-                    Poco::Data::use( idString ),
-                    Poco::Data::now;
+                    POCO_KEYWORD_NAMESPACE use( idString ),
+                    POCO_KEYWORD_NAMESPACE now;
                 dbLock.unlock();
             }
 
@@ -856,9 +865,9 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
     try
     {
         session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
-            Poco::Data::into( idTest ),
-            Poco::Data::use( idString ),
-            Poco::Data::now;
+            POCO_KEYWORD_NAMESPACE into( idTest ),
+            POCO_KEYWORD_NAMESPACE use( idString ),
+            POCO_KEYWORD_NAMESPACE now;
     }
     catch( Poco::Data::DataException &e )
     {
@@ -895,7 +904,7 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     session.setProperty( "minRetrySleep", 50 );
     Poco::Data::Statement statement( session );
 
-    statement << "SELECT uuid FROM " << typeName, Poco::Data::into( resultIDs );
+    statement << "SELECT uuid FROM " << typeName, POCO_KEYWORD_NAMESPACE into( resultIDs );
     try
     {
         statement.execute();
@@ -992,7 +1001,7 @@ void SQLiteStore::Search( const std::string& typeName,
     {
         statement << " WHERE " << wherePredicate;
     }
-    statement, Poco::Data::into( results );
+    statement, POCO_KEYWORD_NAMESPACE into( results );
 
     std::vector< BindableAnyWrapper* > bindableVector;
     BindableAnyWrapper* bindable;
@@ -1045,9 +1054,9 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
         if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
             session << "SELECT 1 FROM sqlite_master WHERE type='table' AND name=:name",
-                Poco::Data::into( tableExists ),
-                Poco::Data::use( TableName ),
-                Poco::Data::now;
+                POCO_KEYWORD_NAMESPACE into( tableExists ),
+                POCO_KEYWORD_NAMESPACE useRef( TableName ),
+                POCO_KEYWORD_NAMESPACE now;
             dbLock.unlock();
         }
         else
@@ -1214,7 +1223,7 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
     {
         try
         {
-            session << "DROP TABLE " << typeName, Poco::Data::now;
+            session << "DROP TABLE " << typeName, POCO_KEYWORD_NAMESPACE now;
         }
         catch( Poco::Data::DataException &e )
         {

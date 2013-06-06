@@ -21,7 +21,16 @@
 
 #include <Poco/Data/Binding.h>
 #include <Poco/Data/Statement.h>
-#include <Poco/Data/BLOBStream.h>
+DIAG_OFF(unused-parameter)
+#include <Poco/Version.h>
+#if POCO_VERSION > 01050000
+    #include <Poco/Data/LOBStream.h>
+    #define POCO_KEYWORD_NAMESPACE Poco::Data::Keywords::
+#else
+    #include <Poco/Data/BLOBStream.h>
+    #define POCO_KEYWORD_NAMESPACE Poco::Data::
+#endif
+DIAG_ON(unused-parameter)
 
 #include <iostream>
 
@@ -48,38 +57,38 @@ bool BindableAnyWrapper::BindValue( Poco::Data::Statement* statement,
     if( value.type( ) == typeid ( bool ) )
     {
         mBool = boost::any_cast< bool >( value );
-        (*statement), Poco::Data::use( mBool );
+        (*statement), POCO_KEYWORD_NAMESPACE use( mBool );
         returnValue = true;
     }
     else if( value.type( ) == typeid (int ) )
     {
         mInt = boost::any_cast< int >( value );
-        (*statement), Poco::Data::use( mInt );
+        (*statement), POCO_KEYWORD_NAMESPACE use( mInt );
         returnValue = true;
     }
     else if( value.type( ) == typeid (float ) )
     {
         mFloat = boost::any_cast< float >( value );
-        (*statement), Poco::Data::use( mFloat );
+        (*statement), POCO_KEYWORD_NAMESPACE use( mFloat );
         returnValue = true;
     }
     else if( value.type( ) == typeid (double ) )
     {
         mDouble = boost::any_cast< double >( value );
-        (*statement), Poco::Data::use( mDouble );
+        (*statement), POCO_KEYWORD_NAMESPACE use( mDouble );
         returnValue = true;
     }
     else if( boost::any_cast< std::string > ( &value ) )
     {
         mString = boost::any_cast< std::string > ( value );
-        (*statement), Poco::Data::use( mString );
+        (*statement), POCO_KEYWORD_NAMESPACE use( mString );
         returnValue = true;
     }
     else if( boost::any_cast< std::vector<char> >( &value ) )
     {
         std::vector<char> data = boost::any_cast< std::vector<char> >( value );
         mBLOB.operator =( data );
-        (*statement), Poco::Data::use( mBLOB );
+        (*statement), POCO_KEYWORD_NAMESPACE use( mBLOB );
         returnValue = true;
     }
 

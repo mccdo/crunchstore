@@ -23,7 +23,12 @@
 #include <boost/any.hpp>
 #include <crunchstore/CompilerGuards.h>
 DIAG_OFF(unused-parameter)
-#include <Poco/Data/BLOB.h>
+#include <Poco/Version.h>
+#if POCO_VERSION > 01050000
+    #include <Poco/Data/LOB.h>
+#else
+    #include <Poco/Data/BLOB.h>
+#endif
 DIAG_ON(unused-parameter)
 
 namespace Poco
@@ -60,7 +65,7 @@ private:
     float mFloat;
     double mDouble;
     std::string mString;
-    Poco::Data::BLOB mBLOB;
+    Poco::Data::CLOB mBLOB;
 
 };
 
