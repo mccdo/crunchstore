@@ -23,6 +23,8 @@
 #include <crunchstore/SQLiteStorePtr.h>
 #include <crunchstore/Logging.h>
 #include <crunchstore/TransactionKey.h>
+//This is a hack to get around an issue with POCO 1.5.1 or greater
+using namespace std;
 #include <crunchstore/SQLiteTransactionKey.h>
 
 #include <Poco/Data/SQLite/SQLite.h>
