@@ -1259,10 +1259,17 @@ Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transact
 void SQLiteStore::SetupDBProperties( Poco::Data::Session& session )
 {
 #if POCO_VERSION < 01050000
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
+    try
+    {
+        session.setProperty( "maxRetryAttempts", 4 );
+        session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+        session.setProperty( "maxRetrySleep", 100 );
+        session.setProperty( "minRetrySleep", 50 );
+    }
+    catch( Poco::Data::DataException& ex )
+    {
+        CRUNCHSTORE_LOG_INFO( ex.displayText() );
+    }
 #else
     boost::ignore_unused_variable_warning( session );
 #endif
