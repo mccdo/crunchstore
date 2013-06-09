@@ -26,7 +26,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
-
+#include <boost/concept_check.hpp>
 
 #include <Poco/Data/SQLite/Connector.h>
 #include <Poco/Data/RecordSet.h>
@@ -101,10 +101,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
     }
 
     Poco::Data::Session session( m_pool->get() );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
+    SetupDBProperties( session );
 
     return _tableExists( session, typeName );
 }
@@ -140,11 +137,8 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     }
 
     Poco::Data::Session session( GetSessionByKey( transactionKey ) );
+    SetupDBProperties( session );
 
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
     Poco::Data::Statement statement( session );
 
     // Need to have explicitly named variables if we want to be able to bind
@@ -588,10 +582,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
 
 //123    Poco::Data::Session session( m_pool->get() );
     Poco::Data::Session session = GetSessionByKey( transactionKey );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
+    SetupDBProperties( session );
 
     // Need to have explicitly named variables if we want to be able to bind
     // with Poco::Data
@@ -813,10 +804,8 @@ void SQLiteStore::Remove( Persistable& persistable, Role,
         std::string idString = persistable.GetUUIDAsString();
 //123        Poco::Data::Session session( m_pool->get() );
         Poco::Data::Session session = GetSessionByKey( transactionKey );
-        session.setProperty( "maxRetryAttempts", 4 );
-        session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-        session.setProperty( "maxRetrySleep", 100 );
-        session.setProperty( "minRetrySleep", 50 );
+        SetupDBProperties( session );
+
         try
         {
             if( dbLock.tryLock( DB_LOCK_TIME ) )
@@ -846,10 +835,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
     }
 
     Poco::Data::Session session( m_pool->get() );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
+    SetupDBProperties( session );
 
     if( !_tableExists( session, typeName ) )
     {
@@ -898,10 +884,8 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     }
 
     Poco::Data::Session session( m_pool->get() );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
+    SetupDBProperties( session );
+
     Poco::Data::Statement statement( session );
 
     statement << "SELECT uuid FROM " << typeName, POCO_KEYWORD_NAMESPACE into( resultIDs );
@@ -927,10 +911,7 @@ void SQLiteStore::Search( const std::string& typeName,
     }
 
     Poco::Data::Session session( m_pool->get() );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
+    SetupDBProperties( session );
 
     if( !_tableExists( session, typeName ) )
     {
@@ -1214,10 +1195,7 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
     }
 
     Poco::Data::Session session( m_pool->get() );
-    session.setProperty( "maxRetryAttempts", 4 );
-    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
-    session.setProperty( "maxRetrySleep", 100 );
-    session.setProperty( "minRetrySleep", 50 );
+    SetupDBProperties( session );
 
     if( _tableExists( session, typeName ) )
     {
@@ -1276,6 +1254,18 @@ Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transact
         //std::cout << "Wrong key type..." << transactionKey.GetTypeString() << std::flush;
         return m_pool->get();
     }
+}
+////////////////////////////////////////////////////////////////////////////////
+void SQLiteStore::SetupDBProperties( Poco::Data::Session& session )
+{
+#if POCO_VERSION < 01050000
+    session.setProperty( "maxRetryAttempts", 4 );
+    session.setProperty( "transactionMode", std::string("IMMEDIATE") );
+    session.setProperty( "maxRetrySleep", 100 );
+    session.setProperty( "minRetrySleep", 50 );
+#else
+    boost::ignore_unused_variable_warning( session );
+#endif
 }
 ////////////////////////////////////////////////////////////////////////////////
 } // namespace crunchstore

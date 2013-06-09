@@ -124,6 +124,10 @@ private:
 
     Poco::Data::Session GetSessionByKey( const TransactionKey& transactionKey );
 
+    ///Setup the properties on the sqlite db
+    ///\param session The db to set the properties on
+    void SetupDBProperties( Poco::Data::Session& session );
+    
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
 
