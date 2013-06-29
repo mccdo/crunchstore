@@ -642,49 +642,52 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
             Poco::DynamicAny value = recordset[index];
             Poco::Data::MetaColumn::ColumnDataType dataType = recordset.columnType( index );
             std::string columnName = recordset.columnName( index );
-            switch( dataType )
+            if( !value.isEmpty() )
             {
-            case Poco::Data::MetaColumn::FDT_BOOL: // Never gets used by SQLite
-                bValue = value.convert<bool>();
-                break;
-            case Poco::Data::MetaColumn::FDT_INT8:
-                bValue = value.convert<int>();
-                break;
-            case Poco::Data::MetaColumn::FDT_INT16:
-                bValue = value.convert<int>();
-                break;
-            case Poco::Data::MetaColumn::FDT_INT32: // Bools appear to also be int32
-                if( persistable.GetDatum( columnName )->IsBool() )//mPropertyMap[columnName]->IsBool() )
+                switch( dataType )
                 {
+                case Poco::Data::MetaColumn::FDT_BOOL: // Never gets used by SQLite
                     bValue = value.convert<bool>();
-                }
-                else
-                {
+                    break;
+                case Poco::Data::MetaColumn::FDT_INT8:
                     bValue = value.convert<int>();
+                    break;
+                case Poco::Data::MetaColumn::FDT_INT16:
+                    bValue = value.convert<int>();
+                    break;
+                case Poco::Data::MetaColumn::FDT_INT32: // Bools appear to also be int32
+                    if( persistable.GetDatum( columnName )->IsBool() )//mPropertyMap[columnName]->IsBool() )
+                    {
+                        bValue = value.convert<bool>();
+                    }
+                    else
+                    {
+                        bValue = value.convert<int>();
+                    }
+                    break;
+                case Poco::Data::MetaColumn::FDT_INT64:
+                    bValue = value.convert<int>();
+                    break;
+                case Poco::Data::MetaColumn::FDT_FLOAT:
+                    bValue = value.convert<float>();
+                    break;
+                case Poco::Data::MetaColumn::FDT_DOUBLE:
+                    bValue = value.convert<double>();
+                    break;
+                case Poco::Data::MetaColumn::FDT_STRING:
+                    bValue = value.convert<std::string>();
+                    break;
+                case Poco::Data::MetaColumn::FDT_BLOB:
+                {
+                    std::string tmp( value.convert<std::string>() );
+                    std::vector< char > charVersion( tmp.begin(), tmp.end() );
+                    bValue = charVersion;
+                    break;
                 }
-                break;
-            case Poco::Data::MetaColumn::FDT_INT64:
-                bValue = value.convert<int>();
-                break;
-            case Poco::Data::MetaColumn::FDT_FLOAT:
-                bValue = value.convert<float>();
-                break;
-            case Poco::Data::MetaColumn::FDT_DOUBLE:
-                bValue = value.convert<double>();
-                break;
-            case Poco::Data::MetaColumn::FDT_STRING:
-                bValue = value.convert<std::string>();
-                break;
-            case Poco::Data::MetaColumn::FDT_BLOB:
-            {
-                std::string tmp( value.convert<std::string>() );
-                std::vector< char > charVersion( tmp.begin(), tmp.end() );
-                bValue = charVersion;
-                break;
-            }
-            default:
-                //std::cout << "Didn't find conversion type" << std::endl << std::flush;
-                break;
+                default:
+                    //std::cout << "Didn't find conversion type" << std::endl << std::flush;
+                    break;
+                }
             }
 
             if( !bValue.empty() )
