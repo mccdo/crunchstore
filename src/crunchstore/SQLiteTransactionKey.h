@@ -24,7 +24,11 @@
 
 //This is a hack to get around an issue with POCO 1.5.1 or greater
 using namespace std;
+
+#include <crunchstore/CompilerGuards.h>
+DIAG_OFF(unused-parameter)
 #include <Poco/Data/Session.h>
+DIAG_ON(unused-parameter)
 
 namespace crunchstore
 {
