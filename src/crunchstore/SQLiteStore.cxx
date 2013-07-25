@@ -30,6 +30,7 @@
 
 #include <Poco/Data/SQLite/Connector.h>
 #include <Poco/Data/RecordSet.h>
+#include <Poco/Data/SQLite/SQLiteException.h>
 DIAG_OFF(unused-parameter)
 #include <Poco/Version.h>
 #if POCO_VERSION > 01050000
@@ -41,12 +42,24 @@ DIAG_OFF(unused-parameter)
 #endif
 DIAG_ON(unused-parameter)
 
+#if defined(__GNUC__)
+    #include <unistd.h>
+#else
+    #if defined(_MSC_VER)
+        #include <windows.h>
+    #endif
+#endif
+
 #include <stdexcept>
-
-
 #include <iostream>
 
 #define DB_LOCK_TIME 2000
+
+#define CS_SQRETRY_PRE for (int i = 0; i < 4; i++) { try {\
+        // Your repeatable statement is inserted here.
+
+#define CS_SQRETRY_POST break; }\
+    catch ( Poco::Data::SQLite::DBLockedException& ) { if (i < 4) DoSleep(); else throw; } }
 
 namespace crunchstore
 {
@@ -169,7 +182,9 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
             if( dbLock.tryLock( DB_LOCK_TIME ) )
             {
+                CS_SQRETRY_PRE
                 sm.execute();
+                CS_SQRETRY_POST
                 dbLock.unlock();
             }
             else
@@ -184,10 +199,12 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         //int idTest = 0;
         std::string idTest;
 
+        CS_SQRETRY_PRE
         session << "SELECT uuid FROM \"" << tableName << "\" WHERE uuid=:uuid",
                 POCO_KEYWORD_NAMESPACE into( idTest ),
                 POCO_KEYWORD_NAMESPACE use( uuidString ),
                 POCO_KEYWORD_NAMESPACE now;
+        CS_SQRETRY_POST
 
         // Since the data binding part will be the same for INSERT and UPDATE
         // operations on this Persistable, we only need to build the string part
@@ -339,7 +356,9 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
 
         if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
+            CS_SQRETRY_PRE
             statement.execute();
+            CS_SQRETRY_POST
             dbLock.unlock();
         }
         else
@@ -445,9 +464,11 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                     // Check for existing table; if table doesn't exist, create it.
                     if( !_tableExists( session, newTableName ) )
                     {
+                        CS_SQRETRY_PRE
                         session << "CREATE TABLE \"" << newTableName <<
                                 "\" (id INTEGER PRIMARY KEY,PropertySetParentID TEXT,"
                                 << fieldName << " " << columnType << ")", POCO_KEYWORD_NAMESPACE now;
+                        CS_SQRETRY_POST
                     }
 
                     // First part of query will delete everything from the sub-table
@@ -472,7 +493,9 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                     listQuery += uuidString;
                     listQuery += "\"";
 
+                    CS_SQRETRY_PRE
                     session << listQuery, POCO_KEYWORD_NAMESPACE now;
+                    CS_SQRETRY_POST
                     listQuery.clear();
 
                     BindableAnyWrapper* bindable;
@@ -543,7 +566,9 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                         }
                         else
                         {
+                            CS_SQRETRY_PRE
                             listStatement.execute();
+                            CS_SQRETRY_POST
                         }
                     }
                 }
@@ -600,7 +625,9 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
     statement << "SELECT * FROM \"" << tableName << "\" WHERE uuid=:0", POCO_KEYWORD_NAMESPACE use( uuidString );
     try
     {
+        CS_SQRETRY_PRE
         statement.execute();
+        CS_SQRETRY_POST
     }
     catch( Poco::Data::DataException &e )
     {
@@ -718,7 +745,9 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
                     , POCO_KEYWORD_NAMESPACE use( mUUIDString );
             try
             {
+                CS_SQRETRY_PRE
                 statement.execute();
+                CS_SQRETRY_POST
             }
             catch( Poco::Data::DataException &e )
             {
@@ -813,9 +842,11 @@ void SQLiteStore::Remove( Persistable& persistable, Role,
         {
             if( dbLock.tryLock( DB_LOCK_TIME ) )
             {
+                CS_SQRETRY_PRE
                 session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
                     POCO_KEYWORD_NAMESPACE use( idString ),
                     POCO_KEYWORD_NAMESPACE now;
+                CS_SQRETRY_POST
                 dbLock.unlock();
             }
 
@@ -853,10 +884,12 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
 
     try
     {
+        CS_SQRETRY_PRE
         session << "SELECT uuid FROM \"" << typeName << "\" WHERE uuid=:uuid",
             POCO_KEYWORD_NAMESPACE into( idTest ),
             POCO_KEYWORD_NAMESPACE use( idString ),
             POCO_KEYWORD_NAMESPACE now;
+        CS_SQRETRY_POST
     }
     catch( Poco::Data::DataException &e )
     {
@@ -894,7 +927,9 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     statement << "SELECT uuid FROM " << typeName, POCO_KEYWORD_NAMESPACE into( resultIDs );
     try
     {
+        CS_SQRETRY_PRE
         statement.execute();
+        CS_SQRETRY_POST
     }
     catch( Poco::Data::DataException &e )
     {
@@ -1005,7 +1040,9 @@ void SQLiteStore::Search( const std::string& typeName,
 
     try
     {
+        CS_SQRETRY_PRE
         statement.execute();
+        CS_SQRETRY_POST
     }
     catch( Poco::Data::DataException &e )
     {
@@ -1037,10 +1074,12 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     {
         if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
+            CS_SQRETRY_PRE
             session << "SELECT 1 FROM sqlite_master WHERE type='table' AND name=:name",
                 POCO_KEYWORD_NAMESPACE into( tableExists ),
                 POCO_KEYWORD_NAMESPACE useRef( TableName ),
                 POCO_KEYWORD_NAMESPACE now;
+            CS_SQRETRY_POST
             dbLock.unlock();
         }
         else
@@ -1204,7 +1243,9 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
     {
         try
         {
+            CS_SQRETRY_PRE
             session << "DROP TABLE " << typeName, POCO_KEYWORD_NAMESPACE now;
+            CS_SQRETRY_POST
         }
         catch( Poco::Data::DataException &e )
         {
@@ -1275,6 +1316,17 @@ void SQLiteStore::SetupDBProperties( Poco::Data::Session& session )
     }
 #else
     boost::ignore_unused_variable_warning( session );
+#endif
+}
+////////////////////////////////////////////////////////////////////////////////
+void SQLiteStore::DoSleep()
+{
+#if defined(__GNUC__)
+    usleep( 100000 );
+#else
+    #if defined(_MSC_VER)
+        Sleep( 100 );
+    #endif
 #endif
 }
 ////////////////////////////////////////////////////////////////////////////////
