@@ -17,6 +17,7 @@
  * Boston, MA 02111-1307, USA.
  *
  *************** <auto-copyright.rb END do not edit this line> ***************/
+//#define CRUNCHSTORE_DEBUG
 #include <crunchstore/SQLiteStore.h>
 #include <crunchstore/Datum.h>
 #include <crunchstore/Persistable.h>
@@ -55,12 +56,14 @@ DIAG_ON(unused-parameter)
 
 #define DB_LOCK_TIME 2000
 
-#define CS_SQRETRY_PRE for (int i = 0; i < 5; i++) { try {
+#define CS_SQRETRY_PRE for (int i = 0; i < 6; i++) { try {
         // Your repeatable statement is inserted here.
 
 #define CS_SQRETRY_POST break; }\
-    catch ( Poco::Data::SQLite::DBLockedException& ) { if (i < 5) DoSleep(); else throw; } \
-    catch ( ... ) { std::cout << "odd error " << std::endl; } \
+    catch ( Poco::Exception& e ) {\
+    CRUNCHSTORE_LOG_DEBUG( "Retry logic: " << e.displayText() << ", i=" << i );\
+    if (i < 5) DoSleep(); else throw; } \
+    catch ( ... ) { CRUNCHSTORE_LOG_ERROR( "Unknown error in retry logic." ); } \
     }
 
 namespace crunchstore
@@ -71,6 +74,7 @@ SQLiteStore::SQLiteStore():
             m_logger( Poco::Logger::get("Crunchstore::SQLiteStore") )
 {
     m_logStream = LogStreamPtr( new Poco::LogStream( m_logger ) );
+    CRUNCHSTORE_LOG_TRACE( "ctor" );
     //std::cout << "SQL: " << this << std::endl << std::flush;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -82,11 +86,13 @@ SQLiteStore::~SQLiteStore()
 ////////////////////////////////////////////////////////////////////////////////
 Poco::Data::SessionPool* SQLiteStore::GetPool()
 {
+    CRUNCHSTORE_LOG_TRACE( "GetPool" );
     return m_pool;
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::SetStorePath( const std::string& path )
 {
+    CRUNCHSTORE_LOG_TRACE( "SetStorePath: " << path );
     //std::cout << "SQLiteStore::SetStorePath: path = "
     //          << path << std::endl << std::flush;
     m_path = path;
@@ -94,6 +100,7 @@ void SQLiteStore::SetStorePath( const std::string& path )
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Attach()
 {
+    CRUNCHSTORE_LOG_TRACE( "Attach" );
     //std::cout << "SQLiteStore::Attach: using path "
     //          << m_path << std::endl << std::flush;
     if( m_pool )
@@ -104,11 +111,19 @@ void SQLiteStore::Attach()
     }
 
     Poco::Data::SQLite::Connector::registerConnector();
-    m_pool = new Poco::Data::SessionPool( "SQLite", m_path, 1, 32, 10 );
+    try
+    {
+        m_pool = new Poco::Data::SessionPool( "SQLite", m_path, 1, 32, 10 );
+    }
+    catch( Poco::Exception& e )
+    {
+        CRUNCHSTORE_LOG_ERROR( "Attach: " << e.displayText() );
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 bool SQLiteStore::HasTypeName( const std::string& typeName )
 {
+    CRUNCHSTORE_LOG_TRACE( "HasTypeName: " << typeName );
     //std::cout << "SQLiteStore::HasTypeName" << std::endl << std::flush;
     if( !m_pool )
     {
@@ -123,6 +138,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Detach()
 {
+    CRUNCHSTORE_LOG_TRACE( "Detach" );
     //std::cout << "SQLiteStore::Detach" << std::endl << std::flush;
     if( m_pool )
     {
@@ -145,6 +161,7 @@ void SQLiteStore::Detach()
 void SQLiteStore::SaveImpl( const Persistable& persistable,
                    Role, const TransactionKey& transactionKey )
 {
+    CRUNCHSTORE_LOG_TRACE( "SaveImpl" );
     //std::cout << "SQLiteStore::SaveImpl" << std::endl << std::flush;
     if( !m_pool )
     {
@@ -601,6 +618,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
 void SQLiteStore::LoadImpl( Persistable& persistable, Role,
                             const TransactionKey& transactionKey )
 {
+    CRUNCHSTORE_LOG_TRACE( "LoadImpl" );
     //std::cout << "SQLiteStore::LoadImpl" << std::endl << std::flush;
     if( !m_pool )
     {
@@ -826,6 +844,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
 void SQLiteStore::Remove( Persistable& persistable, Role,
                           const TransactionKey& transactionKey )
 {
+    CRUNCHSTORE_LOG_TRACE( "Remove" );
     //std::cout << "SQLiteStore::Remove" << std::endl << std::flush;
     if( !m_pool )
     {
@@ -864,6 +883,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
                                     const std::string& typeName,
                                     Role )
 {
+    CRUNCHSTORE_LOG_TRACE( "HasIDForTypename" );
     //std::cout << "SQLiteStore::HasIDForTypename " << typeName << std::endl << std::flush;
     if( !m_pool )
     {
@@ -915,6 +935,7 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
                                      std::vector< std::string >& resultIDs,
                                      Role )
 {
+    CRUNCHSTORE_LOG_TRACE( "GetIDsForTypename" );
     //std::cout << "SQLiteStore::GetIDsForTypename" << std::endl << std::flush;
     if( !m_pool )
     {
@@ -944,6 +965,7 @@ void SQLiteStore::Search( const std::string& typeName,
                           const std::string& returnField,
                           std::vector< std::string >& results )
 {
+    CRUNCHSTORE_LOG_TRACE( "Search" );
     //std::cout << "SQLiteStore::Search" << std::endl << std::flush;
     if( !m_pool )
     {
@@ -1068,6 +1090,7 @@ void SQLiteStore::ProcessBackgroundTasks()
 ////////////////////////////////////////////////////////////////////////////////
 bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const& TableName )
 {
+    CRUNCHSTORE_LOG_TRACE( "_tableExists" );
     bool tableExists = false;
 
     // "SELECT 1 ... will put a 1 (true) into the boolean value if the tablename
@@ -1099,6 +1122,7 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
 ////////////////////////////////////////////////////////////////////////////////
 std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistable )
 {
+    CRUNCHSTORE_LOG_TRACE( "_buildColumnHeaderString" );
     std::string result;
 
     // Forcing the primary key to autoincrement ensures that we can always
@@ -1194,6 +1218,7 @@ std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistabl
 ////////////////////////////////////////////////////////////////////////////////
 bool SQLiteStore::_containsIllegalCharacter( std::string const& value )
 {
+    CRUNCHSTORE_LOG_TRACE( "_containsIllegalCharacter" );
     size_t position = value.find_first_not_of(
             "1234567890_aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ" );
     if( position != value.npos )
@@ -1208,6 +1233,7 @@ bool SQLiteStore::_containsIllegalCharacter( std::string const& value )
 ////////////////////////////////////////////////////////////////////////////////
 size_t SQLiteStore::GetBoostAnyVectorSize( const boost::any& value )
 {
+    CRUNCHSTORE_LOG_TRACE( "GetBoostAnyVectorSize" );
     size_t size = 0;
     Datum temp( 0 );
     if( temp.IsIntVector( value ) )
@@ -1232,13 +1258,16 @@ size_t SQLiteStore::GetBoostAnyVectorSize( const boost::any& value )
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::Drop( const std::string& typeName, Role )
 {
+    CRUNCHSTORE_LOG_TRACE( "Drop" );
     //std::cout << "SQLiteStore::Drop" << std::endl << std::flush;
     if( !m_pool )
     {
         return;
     }
 
+
     Poco::Data::Session session( m_pool->get() );
+    CRUNCHSTORE_LOG_TRACE( "Drop: session acquired" );
     SetupDBProperties( session );
 
     if( _tableExists( session, typeName ) )
@@ -1249,9 +1278,10 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
             session << "DROP TABLE " << typeName, POCO_KEYWORD_NAMESPACE now;
             CS_SQRETRY_POST
         }
-        catch( Poco::Data::DataException &e )
+        catch( Poco::Exception &e )
         {
-            CRUNCHSTORE_LOG_ERROR( "SQLiteStore::Drop: " << e.displayText() );
+            CRUNCHSTORE_LOG_ERROR( "Drop: " << e.displayText() );
+            throw;
         }
     }
 }
@@ -1281,6 +1311,7 @@ void SQLiteStore::EndTransaction( TransactionKey& transactionKey )
 ////////////////////////////////////////////////////////////////////////////////
 Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transactionKey )
 {
+    CRUNCHSTORE_LOG_TRACE( "GetSessionByKey" );
     if( transactionKey.GetTypeString() == "SQLite" )
     {
         SQLiteTransactionKey key = static_cast< const SQLiteTransactionKey& >( transactionKey );
@@ -1323,6 +1354,7 @@ void SQLiteStore::SetupDBProperties( Poco::Data::Session& session )
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::DoSleep()
 {
+    CRUNCHSTORE_LOG_TRACE( "DoSleep" );
 #if defined(__GNUC__)
     usleep( 100000 );
 #else
