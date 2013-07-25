@@ -127,6 +127,9 @@ private:
     ///Setup the properties on the sqlite db
     ///\param session The db to set the properties on
     void SetupDBProperties( Poco::Data::Session& session );
+
+    /// Sleep for 100 ms
+    void DoSleep();
     
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
