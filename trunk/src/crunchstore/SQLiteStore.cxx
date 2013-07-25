@@ -55,11 +55,13 @@ DIAG_ON(unused-parameter)
 
 #define DB_LOCK_TIME 2000
 
-#define CS_SQRETRY_PRE for (int i = 0; i < 4; i++) { try {\
+#define CS_SQRETRY_PRE for (int i = 0; i < 5; i++) { try {
         // Your repeatable statement is inserted here.
 
 #define CS_SQRETRY_POST break; }\
-    catch ( Poco::Data::SQLite::DBLockedException& ) { if (i < 4) DoSleep(); else throw; } }
+    catch ( Poco::Data::SQLite::DBLockedException& ) { if (i < 5) DoSleep(); else throw; } \
+    catch ( ... ) { std::cout << "odd error " << std::endl; } \
+    }
 
 namespace crunchstore
 {
