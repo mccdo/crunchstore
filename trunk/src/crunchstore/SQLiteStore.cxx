@@ -208,8 +208,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             }
             else
             {
-                std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
-                return;
+                throw std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
             }
         }
 
@@ -396,7 +395,6 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     {
         CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: " << e.what() );
     }
-
     catch( ... )
     {
         CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: Unspecified error when writing to database." );
@@ -1218,9 +1216,9 @@ std::string SQLiteStore::_buildColumnHeaderString( const Persistable& persistabl
 ////////////////////////////////////////////////////////////////////////////////
 bool SQLiteStore::_containsIllegalCharacter( std::string const& value )
 {
-    CRUNCHSTORE_LOG_TRACE( "_containsIllegalCharacter" );
     size_t position = value.find_first_not_of(
             "1234567890_aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ" );
+    CRUNCHSTORE_LOG_TRACE( "_containsIllegalCharacter " << position << " " << value );
     if( position != value.npos )
     {
         return true;
