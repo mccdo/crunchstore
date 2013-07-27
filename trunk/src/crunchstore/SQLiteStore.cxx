@@ -201,10 +201,12 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
             if( dbLock.tryLock( DB_LOCK_TIME ) )
             {
+                CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock" );
                 CS_SQRETRY_PRE
                 sm.execute();
                 CS_SQRETRY_POST
                 dbLock.unlock();
+                CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock" );
             }
             else
             {
@@ -374,10 +376,12 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
 
         if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
+            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #2" );
             CS_SQRETRY_PRE
             statement.execute();
             CS_SQRETRY_POST
             dbLock.unlock();
+            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #2" );
         }
         else
         {
@@ -421,6 +425,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     if( dbLock.tryLock( DB_LOCK_TIME ) )
     {
 //123        session.begin();
+        CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #3" );
         DatumPtr property;
         std::vector< std::string > dataList = persistable.GetDataList();
         std::vector< std::string >::const_iterator it = dataList.begin();
@@ -595,6 +600,7 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         // Close the db transaction
 //123        session.commit();
         dbLock.unlock();
+        CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #3" );
     }
     else
     {
@@ -861,12 +867,14 @@ void SQLiteStore::Remove( Persistable& persistable, Role,
         {
             if( dbLock.tryLock( DB_LOCK_TIME ) )
             {
+                CRUNCHSTORE_LOG_TRACE( "Remove Lock" );
                 CS_SQRETRY_PRE
                 session << "DELETE FROM \"" << typeName << "\" WHERE uuid=:uuid",
                     POCO_KEYWORD_NAMESPACE use( idString ),
                     POCO_KEYWORD_NAMESPACE now;
                 CS_SQRETRY_POST
                 dbLock.unlock();
+                CRUNCHSTORE_LOG_TRACE( "Remove Unlock" );
             }
 
         }
@@ -1095,20 +1103,21 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     // is found in the database.
     try
     {
-        if( dbLock.tryLock( DB_LOCK_TIME ) )
-        {
+        // RPT: Not sure why we need to obtain a lock before a read op.
+        //if( dbLock.tryLock( DB_LOCK_TIME ) )
+        //{
             CS_SQRETRY_PRE
             session << "SELECT 1 FROM sqlite_master WHERE type='table' AND name=:name",
                 POCO_KEYWORD_NAMESPACE into( tableExists ),
                 POCO_KEYWORD_NAMESPACE useRef( TableName ),
                 POCO_KEYWORD_NAMESPACE now;
             CS_SQRETRY_POST
-            dbLock.unlock();
-        }
-        else
-        {
-            throw std::runtime_error( "Unable to acquire lock in SQLiteStore::_tableExists" );
-        }
+            //dbLock.unlock();
+        //}
+        //else
+        //{
+        //    throw std::runtime_error( "Unable to acquire lock in SQLiteStore::_tableExists" );
+        //}
     }
     catch( Poco::Data::DataException &e )
     {
