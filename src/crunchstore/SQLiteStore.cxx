@@ -167,37 +167,60 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         return;
     }
 
+    bool transactionInProgress;
+    Poco::Data::Session session( GetSessionByKey( transactionKey, transactionInProgress ) );
+    SetupDBProperties( session );
+
+    // Need to have explicitly named variables if we want to be able to bind
+    // with Poco::Data
+    std::string tableName = persistable.GetTypeName();
+    std::string uuidString = persistable.GetUUIDAsString();
+
+    if( tableName.empty() )
+    {
+        return;
+    }
+
     try
     {
-        Poco::Data::Session session( GetSessionByKey( transactionKey ) );
-        SetupDBProperties( session );
-
-        // Need to have explicitly named variables if we want to be able to bind
-        // with Poco::Data
-        std::string tableName = persistable.GetTypeName();
-        std::string uuidString = persistable.GetUUIDAsString();
-
-        if( tableName.empty() )
+        if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
-            return;
+            if( !transactionInProgress )
+            {
+                // If we're not inside of a larger transaction, make this save
+                // operation its own single transaction.
+                session.begin();
+            }
+            UpdatePersistable( persistable, session, tableName, uuidString );
+            UpdatePersistableVector( persistable, session, tableName, uuidString );
+            if( !transactionInProgress )
+            {
+                // Commit the transaction only if we opened one just above.
+                session.commit();
+            }
+            dbLock.unlock();
         }
-
-        UpdatePersistable( persistable, session, tableName, uuidString );
-
-        UpdatePersistableVector( persistable, session, tableName, uuidString );
+        else
+        {
+            throw std::runtime_error( "Unable to acquire lock in SQLiteStore::SaveImpl" );
+        }
     }
     catch( Poco::Data::DataException &e )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl DataException : " << e.displayText() );
+        CRUNCHSTORE_LOG_ERROR( "SaveImpl DataException : " << e.displayText() );
+        throw;
     }
     catch( std::runtime_error &e )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl runtime_error : " << e.what() );
+        CRUNCHSTORE_LOG_ERROR( "SaveImpl runtime_error : " << e.what() );
+        throw;
     }
     catch( ... )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl : Unspecified error when writing to database." );
+        CRUNCHSTORE_LOG_ERROR( "SaveImpl : Unspecified error when writing to database." );
+        throw;
     }
+
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::LoadImpl( Persistable& persistable, Role,
@@ -211,7 +234,8 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
     }
 
 //123    Poco::Data::Session session( m_pool->get() );
-    Poco::Data::Session session = GetSessionByKey( transactionKey );
+    bool transactionInProgress;
+    Poco::Data::Session session = GetSessionByKey( transactionKey, transactionInProgress );
     SetupDBProperties( session );
 
     // Need to have explicitly named variables if we want to be able to bind
@@ -441,7 +465,8 @@ void SQLiteStore::Remove( Persistable& persistable, Role,
     {
         std::string idString = persistable.GetUUIDAsString();
 //123        Poco::Data::Session session( m_pool->get() );
-        Poco::Data::Session session = GetSessionByKey( transactionKey );
+        bool transactionInProgress;
+        Poco::Data::Session session = GetSessionByKey( transactionKey, transactionInProgress );
         SetupDBProperties( session );
 
         try
@@ -897,7 +922,7 @@ void SQLiteStore::EndTransaction( TransactionKey& transactionKey )
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transactionKey )
+Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transactionKey, bool& transactionInProgress )
 {
     CRUNCHSTORE_LOG_TRACE( "GetSessionByKey" );
     if( transactionKey.GetTypeString() == "SQLite" )
@@ -906,17 +931,20 @@ Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transact
         if( key.IsSet() )
         {
             //std::cout << "Returning the saved session..." << std::flush;
+            transactionInProgress = true;
             return key.GetSession();
         }
         else
         {
             //std::cout << "Key not set..." << std::flush;
+            transactionInProgress = false;
             return m_pool->get();
         }
     }
     else
     {
         //std::cout << "Wrong key type..." << transactionKey.GetTypeString() << std::flush;
+        transactionInProgress = false;
         return m_pool->get();
     }
 }
@@ -966,26 +994,33 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
         Poco::Data::Statement statement( session );
 
         // See if a table for this type already exists; if not create the table
+//        if( dbLock.tryLock( DB_LOCK_TIME ) )
+//        {
         if( !_tableExists( session, tableName ) ) // Table doesn't exist
         {
             std::string columnHeaderString = _buildColumnHeaderString( persistable );
             Poco::Data::Statement sm( session );
             sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
-            if( dbLock.tryLock( DB_LOCK_TIME ) )
-            {
-                CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock" );
+//            if( dbLock.tryLock( DB_LOCK_TIME ) )
+//            {
+//                CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock" );
                 CS_SQRETRY_PRE
                 sm.execute();
                 CS_SQRETRY_POST
-                dbLock.unlock();
-                CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock" );
-            }
-            else
-            {
-                throw std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
-            }
+//                dbLock.unlock();
+//                CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock" );
+//            }
+//            else
+//            {
+//                throw std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
+//            }
         }
-        
+//        }
+//        else
+//        {
+//            throw std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
+//        }
+
         // Determine whether a record already exists for this PropertySet.
         // This query will return a non-zero, positive id iff the record exists
         //int idTest = 0;
@@ -1146,31 +1181,34 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
         
         //std::cout << statement.toString() << std::endl;
         
-        if( dbLock.tryLock( DB_LOCK_TIME ) )
-        {
-            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #2" );
+//        if( dbLock.tryLock( DB_LOCK_TIME ) )
+//        {
+//            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #2" );
             CS_SQRETRY_PRE
             statement.execute();
             CS_SQRETRY_POST
-            dbLock.unlock();
-            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #2" );
-        }
-        else
-        {
-            throw std::runtime_error( "Unable to obtain lock while writing data in SQLiteStore::SaveImpl 2" );
-        }
+//            dbLock.unlock();
+//            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #2" );
+//        }
+//        else
+//        {
+//            throw std::runtime_error( "Unable to obtain lock while writing data in SQLiteStore::SaveImpl 2" );
+//        }
     }
     catch( Poco::Data::DataException &e )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 2: " << e.displayText() );
+        CRUNCHSTORE_LOG_ERROR( "SaveImpl 2: " << e.displayText() );
+        throw;
     }
     catch( std::runtime_error &e )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 2: " << e.what() );
+        CRUNCHSTORE_LOG_ERROR( "SaveImpl 2: " << e.what() );
+        throw;
     }
     catch( ... )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 2: Unspecified error when writing to database." );
+        CRUNCHSTORE_LOG_ERROR( "SaveImpl 2: Unspecified error when writing to database." );
+        throw;
     }
     
     // Delete the BindableAnyWrapperS that were created in the binding loop
@@ -1196,10 +1234,10 @@ void SQLiteStore::UpdatePersistableVector( const Persistable& persistable, Poco:
         // happen very quickly. Failure to use a transaction in this instance
         // will cause lists to take roughly .25 seconds *per item*. With a transaction,
         // 10,000 items can be inserted or updated in ~1 second.
-        if( dbLock.tryLock( DB_LOCK_TIME ) )
-        {
+//        if( dbLock.tryLock( DB_LOCK_TIME ) )
+//        {
             //123        session.begin();
-            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #3" );
+//            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #3" );
             DatumPtr property;
             std::vector< std::string > dataList = persistable.GetDataList();
             std::vector< std::string >::const_iterator it = dataList.begin();
@@ -1373,25 +1411,28 @@ void SQLiteStore::UpdatePersistableVector( const Persistable& persistable, Poco:
             }
             // Close the db transaction
             //123        session.commit();
-            dbLock.unlock();
-            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #3" );
-        }
-        else
-        {
-            throw std::runtime_error( "Unable to obtain lock while writing list data in SQLiteStore::_SaveImpl 3" );
-        }
+//            dbLock.unlock();
+//            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #3" );
+//        }
+//        else
+//        {
+//            throw std::runtime_error( "Unable to obtain lock while writing list data in SQLiteStore::_SaveImpl 3" );
+//        }
     }
     catch( Poco::Data::DataException &e )
     {
         CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 3: " << e.displayText() );
+        throw;
     }
     catch( std::runtime_error &e )
     {
         CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 3: " << e.what() );
+        throw;
     }
     catch( ... )
     {
         CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 3: Unspecified error when writing to database." );
+        throw;
     }
 
     {

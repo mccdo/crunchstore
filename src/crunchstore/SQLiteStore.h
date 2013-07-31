@@ -122,7 +122,7 @@ private:
 
     size_t GetBoostAnyVectorSize( const boost::any& value );
 
-    Poco::Data::Session GetSessionByKey( const TransactionKey& transactionKey );
+    Poco::Data::Session GetSessionByKey( const TransactionKey& transactionKey, bool& transactionInProgress );
 
     ///Setup the properties on the sqlite db
     ///\param session The db to set the properties on
