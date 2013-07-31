@@ -162,460 +162,41 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
                    Role, const TransactionKey& transactionKey )
 {
     CRUNCHSTORE_LOG_TRACE( "SaveImpl" );
-    //std::cout << "SQLiteStore::SaveImpl" << std::endl << std::flush;
     if( !m_pool )
     {
         return;
     }
 
-    Poco::Data::Session session( GetSessionByKey( transactionKey ) );
-    SetupDBProperties( session );
-
-    Poco::Data::Statement statement( session );
-
-    // Need to have explicitly named variables if we want to be able to bind
-    // with Poco::Data
-    std::string tableName = persistable.GetTypeName();
-    std::string uuidString = persistable.GetUUIDAsString();
-
-//    bool returnVal = false;
-
-    if( tableName.empty() )
-    {
-        return;// false;
-    }
-
-    // These two don't get used until about 150 lines down, but need to be
-    // declared outside the try{} block so memory can be properly cleaned
-    // up in case of an exception during writing to database
-    // Stores bindable wrappers for later deletion
-    std::vector< BindableAnyWrapper* > bindableVector;
-
     try
     {
-        // See if a table for this type already exists; if not create the table
-        if( !_tableExists( session, tableName ) ) // Table doesn't exist
+        Poco::Data::Session session( GetSessionByKey( transactionKey ) );
+        SetupDBProperties( session );
+
+        // Need to have explicitly named variables if we want to be able to bind
+        // with Poco::Data
+        std::string tableName = persistable.GetTypeName();
+        std::string uuidString = persistable.GetUUIDAsString();
+
+        if( tableName.empty() )
         {
-            std::string columnHeaderString = _buildColumnHeaderString( persistable );
-            Poco::Data::Statement sm( session );
-            sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
-            if( dbLock.tryLock( DB_LOCK_TIME ) )
-            {
-                CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock" );
-                CS_SQRETRY_PRE
-                sm.execute();
-                CS_SQRETRY_POST
-                dbLock.unlock();
-                CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock" );
-            }
-            else
-            {
-                throw std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
-            }
+            return;
         }
 
-        // Determine whether a record already exists for this PropertySet.
-        // This query will return a non-zero, positive id iff the record exists
-        //int idTest = 0;
-        std::string idTest;
+        UpdatePersistable( persistable, session, tableName, uuidString );
 
-        CS_SQRETRY_PRE
-        session << "SELECT uuid FROM \"" << tableName << "\" WHERE uuid=:uuid",
-                POCO_KEYWORD_NAMESPACE into( idTest ),
-                POCO_KEYWORD_NAMESPACE use( uuidString ),
-                POCO_KEYWORD_NAMESPACE now;
-        CS_SQRETRY_POST
-
-        // Since the data binding part will be the same for INSERT and UPDATE
-        // operations on this Persistable, we only need to build the string part
-        // of the query separately.
-
-        // Will hold the string part of any query we do.
-        std::string query;
-        // Will hold the list of fields in the order added to query.
-        std::vector< std::string > fieldNames;
-
-//        if( idTest == 0 ) //  Record does not exist; perform an INSERT
-        if( idTest.empty() )
-        {
-            // Build a query that looks like this:
-            // "INSERT INTO tablename (field1name_1,fieldname_2,...) VALUES (:1,:2,...)"
-            query = "INSERT INTO \"";
-            query.append( tableName );
-            query.append( "\" (uuid," );
-
-            DatumPtr property;
-            std::vector< std::string > dataList = persistable.GetDataList();
-            std::vector< std::string >::const_iterator it = dataList.begin();
-            while( it != dataList.end() )
-            {
-                property = persistable.GetDatum( *it );
-                // Check for a known type
-                if( ( property->IsBool() ) || ( property->IsDouble() ) ||
-                        ( property->IsFloat() ) || ( property->IsInt() ) ||
-                        ( property->IsString() ) || property->IsBLOB() )
-                {
-                    // Skip the property if its name contains illegal characters
-                    if( !_containsIllegalCharacter( *it ) )
-                    {
-                        query.append( *it );
-                        query.append( "," );
-                        fieldNames.push_back( *it );
-                    }
-                    ++it;
-                }
-                else // Didn't put in field name because we had an unknown type
-                {
-                    ++it;
-                }
-            }
-
-            // There should be an extra comma at the end of the query that must be
-            // removed. Test for it and remove if it is there.
-            if( query.substr( query.size() - 1, query.size() ) == "," )
-            {
-                query.erase( --query.end() );
-            }
-
-            query.append( ") VALUES (" );
-            // Put in uuid explicitly since it appears only in INSERT and not
-            // in UPDATE queries
-            query.append( "\"");
-            query.append( uuidString );
-            query.append( "\",");
-
-            // Put in the binding labels (:0,:1,...) for Poco::Data
-            size_t max = fieldNames.size();
-            for( size_t count = 0; count < max; count++ )
-            {
-                query.append( ":" );
-                query.append( boost::lexical_cast<std::string > ( count ) );
-                query.append( "," );
-            }
-            // There should be an extra comma at the end of the query that must be
-            // removed. Test for it and remove if it is there.
-            if( query.substr( query.size() - 1, query.size() ) == "," )
-            {
-                query.erase( --query.end() );
-            }
-
-            query.append( ")" );
-        }
-        else // Record exists; perform an UPDATE
-        {
-            // Build a query that looks like:
-            // "UPDATE tablename SET field_0=:0, field_1=:1 WHERE id=mID"
-            query = "UPDATE \"";
-            query.append( tableName );
-            query.append( "\" SET " );
-
-            //PropertyPtr property;
-            //PropertyMap::const_iterator iterator = mPropertyMap.begin();
-            DatumPtr property;
-            std::vector< std::string > dataList = persistable.GetDataList();
-            std::vector< std::string >::const_iterator it = dataList.begin();
-            while( it != dataList.end() )
-            {
-                property = persistable.GetDatum( *it );
-                // Check for a known type
-                if( ( property->IsBool() ) || ( property->IsDouble() ) ||
-                        ( property->IsFloat() ) || ( property->IsInt() ) ||
-                        ( property->IsString() ) || ( property->IsBLOB() ) )
-                {
-                    // Skip the property if its name contains illegal characters
-                    if( !_containsIllegalCharacter( *it ) )
-                    {
-                        query.append( *it );
-                        query.append( "=:" );
-                        query.append( boost::lexical_cast<std::string > ( fieldNames.size() ) );
-                        query.append( "," );
-
-                        fieldNames.push_back( *it );
-                    }
-                    ++it;
-                }
-                else // Didn't put in field name because we had an unknown type
-                {
-                    ++it;
-                }
-            }
-            // There should be an extra comma at the end of the query that must be
-            // removed. Test for it and remove if it is there.
-            if( query.substr( query.size() - 1, query.size() ) == "," )
-            {
-                query.erase( --query.end() );
-            }
-
-//            query.append( " WHERE id=" );
-//            query.append( boost::lexical_cast<std::string > ( mID ) );
-            query.append( " WHERE uuid=\"" );
-            query.append( uuidString );
-            query.append("\"");
-            //std::cout << query << std::endl << std::flush;
-        }
-
-        // Turn the query into a statement that can accept bound values
-        //Poco::Data::Statement statement( session );
-        statement << query;
-
-        // The data binding looks the same for either query type (INSERT or UPDATE)
-        BindableAnyWrapper* bindable; // Bindable wrapper for property data
-        DatumPtr property;
-        std::vector<std::string>::iterator it = fieldNames.begin();
-        while( it != fieldNames.end() )
-        {
-            const std::string currentFieldName = ( *it );
-            property = persistable.GetDatum( currentFieldName );
-            bindable = new BindableAnyWrapper;
-            bindableVector.push_back( bindable );
-            bindable->BindValue( &statement, property->GetValue() );
-            ++it;
-        }
-
-        //std::cout << statement.toString() << std::endl;
-
-        if( dbLock.tryLock( DB_LOCK_TIME ) )
-        {
-            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #2" );
-            CS_SQRETRY_PRE
-            statement.execute();
-            CS_SQRETRY_POST
-            dbLock.unlock();
-            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #2" );
-        }
-        else
-        {
-            throw std::runtime_error( "Unable to obtain lock while writing data in SQLiteStore::SaveImpl" );
-        }
-
-        // If we've made it here, we successfully wrote to database
-        //returnVal = true;
+        UpdatePersistableVector( persistable, session, tableName, uuidString );
     }
     catch( Poco::Data::DataException &e )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: " << e.displayText() );
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl DataException : " << e.displayText() );
     }
     catch( std::runtime_error &e )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: " << e.what() );
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl runtime_error : " << e.what() );
     }
     catch( ... )
     {
-        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl: Unspecified error when writing to database." );
-    }
-
-    // Delete the BindableAnyWrapperS that were created in the binding loop
-    std::vector< BindableAnyWrapper* >::iterator biterator =
-            bindableVector.begin();
-    while( biterator != bindableVector.end() )
-    {
-        delete ( *biterator );
-        ++biterator;
-    }
-
-
-    // After the top-level entries have been written, we write out any vectorized
-    // quantities which must go in their own sub-table(s)
-    std::vector< BindableAnyWrapper* > bindVector;
-
-    // Open a db transaction. This allows multiple INSERTs and UPDATEs to
-    // happen very quickly. Failure to use a transaction in this instance
-    // will cause lists to take roughly .25 seconds *per item*. With a transaction,
-    // 10,000 items can be inserted or updated in ~1 second.
-    if( dbLock.tryLock( DB_LOCK_TIME ) )
-    {
-//123        session.begin();
-        CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #3" );
-        DatumPtr property;
-        std::vector< std::string > dataList = persistable.GetDataList();
-        std::vector< std::string >::const_iterator it = dataList.begin();
-        while( it != dataList.end() )
-        {
-            property = persistable.GetDatum( *it );
-            if( property->IsVectorized() )
-            {
-                // Vectors (lists) are written into separate tables named
-                // ParentTable_[ThisPropertyName]. Prefixing with the parent table
-                // name ensures that property names need not be unique across all property
-                // sets. For example, PropertySetA might have a property called
-                // 'Directions' that is a list of strings, and PropertySetB might have a property
-                // set called 'Directions' that is a list of integers. If the child table is
-                // simply called "Directions", there could be foreign key overlap in the child table,
-                // as well as problems with type mis-match. Prefixing with the parent table's
-                // name prevents such issues.
-
-                enum LISTTYPE
-                {
-                    UNKNOWN, INTEGER, FLOAT, DOUBLE, STRING
-                };
-                LISTTYPE listType = UNKNOWN;
-                std::string columnType( "" );
-
-                // Determine the list type and set the column type in case the table
-                // must be created.
-                if( property->IsIntVector() )
-                {
-                    listType = INTEGER;
-                    columnType = "INTEGER";
-                }
-                else if( property->IsFloatVector() )
-                {
-                    listType = FLOAT;
-                    columnType = "FLOAT";
-                }
-                else if( property->IsDoubleVector() )
-                {
-                    listType = DOUBLE;
-                    columnType = "DOUBLE";
-                }
-                else if( property->IsStringVector() )
-                {
-                    listType = STRING;
-                    columnType = "TEXT";
-                }
-
-                if( listType != UNKNOWN )
-                {
-                    // New (sub)table gets the name
-                    // [ParentTableName]_[currentFieldName]
-                    std::string newTableName( tableName );
-                    newTableName += "_";
-                    std::string fieldName = *it;
-                    newTableName += fieldName;
-
-                    // Check for existing table; if table doesn't exist, create it.
-                    if( !_tableExists( session, newTableName ) )
-                    {
-                        CS_SQRETRY_PRE
-                        session << "CREATE TABLE \"" << newTableName <<
-                                "\" (id INTEGER PRIMARY KEY,PropertySetParentID TEXT,"
-                                << fieldName << " " << columnType << ")", POCO_KEYWORD_NAMESPACE now;
-                        CS_SQRETRY_POST
-                    }
-
-                    // First part of query will delete everything from the sub-table
-                    // that this propertyset owns. We do this because it is
-                    // much easier than checking whether the data exists
-                    // and attempting to do an update. In the case of a list like this,
-                    // we'd not only have to see if the list already exists in the table,
-                    // but whether it's the same length. Then we'd have to either delete
-                    // rows from the table or insert rows to make the lengths match
-                    // before doing an update. Far easier to wipe out what's there
-                    // and start fresh. It's probably a little slower for large
-                    // lists to do it this way. If lists become a performance
-                    // problem, this is one place to look for possible speedups.
-                    // "DELETE FROM [newtablename] WHERE PropertySetParentID=[id]"
-                    std::string listQuery;
-                    listQuery += "DELETE FROM \"";
-                    listQuery += newTableName;
-                    listQuery += "\" WHERE ";
-                    listQuery += "PropertySetParentID=";
-                    //listQuery += boost::lexical_cast<std::string > ( mID );
-                    listQuery += "\"";
-                    listQuery += uuidString;
-                    listQuery += "\"";
-
-                    CS_SQRETRY_PRE
-                    session << listQuery, POCO_KEYWORD_NAMESPACE now;
-                    CS_SQRETRY_POST
-                    listQuery.clear();
-
-                    BindableAnyWrapper* bindable;
-                    size_t max = GetBoostAnyVectorSize( property->GetValue() );
-                    for( size_t index = 0; index < max; ++index )
-                    {
-                        // Build up query:
-                        // INSERT INTO [newTableName]
-                        // ([fieldName],PropertySetParentID) VALUES (:num,[mID])
-                        listQuery += "INSERT INTO \"";
-                        listQuery += newTableName;
-                        listQuery += "\" (";
-                        listQuery += fieldName;
-                        listQuery += ",PropertySetParentID) VALUES (:";
-                        listQuery += boost::lexical_cast<std::string > ( index );
-                        listQuery += ",";
-                        //listQuery += boost::lexical_cast<std::string > ( mID );
-                        listQuery += "\"";
-                        listQuery += uuidString;
-                        listQuery += "\"";
-                        listQuery += ")";
-
-                        // Turn into a prepared statement that can accept bindings
-                        Poco::Data::Statement listStatement( session );
-                        listStatement << listQuery;
-                        listQuery.clear();
-
-                        // Extract data from vector for binding into query
-                        boost::any currentValue;
-                        switch( listType )
-                        {
-                        case INTEGER:
-                        {
-                            std::vector<int> vec = property->extract< std::vector< int > >();
-                            currentValue = vec.at( index );
-                            break;
-                        }
-                        case FLOAT:
-                        {
-                            std::vector<float> vec = property->extract< std::vector< float > >();
-                            currentValue = vec.at( index );
-                            break;
-                        }
-                        case DOUBLE:
-                        {
-                            std::vector<double> vec = property->extract< std::vector< double > >();
-                            currentValue = vec.at( index );
-                            break;
-                        }
-                        case STRING:
-                        {
-                            std::vector<std::string> vec = property->extract< std::vector< std::string > >();
-                            currentValue = vec.at( index );
-                            break;
-                        }
-                        case UNKNOWN:
-                        {
-                            break;
-                        }
-                        }
-
-                        // Bind the data and execute the statement if no binding errors
-                        bindable = new BindableAnyWrapper;
-                        bindVector.push_back( bindable );
-                        if( !bindable->BindValue( &listStatement, currentValue ) )
-                        {
-                            CRUNCHSTORE_LOG_ERROR( "Error in binding data" );
-                        }
-                        else
-                        {
-                            CS_SQRETRY_PRE
-                            listStatement.execute();
-                            CS_SQRETRY_POST
-                        }
-                    }
-                }
-            }
-            ++it;
-        }
-        // Close the db transaction
-//123        session.commit();
-        dbLock.unlock();
-        CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #3" );
-    }
-    else
-    {
-        throw std::runtime_error( "Unable to obtain lock while writing list data in SQLiteStore::_SaveImpl" );
-    }
-
-
-    { // Braces protect scoping of biterator
-        std::vector< BindableAnyWrapper* >::iterator biterator =
-                bindVector.begin();
-        while( biterator != bindVector.end() )
-        {
-            delete ( *biterator );
-            ++biterator;
-        }
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl : Unspecified error when writing to database." );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -1369,6 +950,460 @@ void SQLiteStore::DoSleep()
         Sleep( 100 );
     #endif
 #endif
+}
+////////////////////////////////////////////////////////////////////////////////
+void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data::Session& session,
+                                        std::string& tableName, std::string& uuidString )
+{
+    // These two don't get used until about 150 lines down, but need to be
+    // declared outside the try{} block so memory can be properly cleaned
+    // up in case of an exception during writing to database
+    // Stores bindable wrappers for later deletion
+    std::vector< BindableAnyWrapper* > bindableVector;
+    
+    try
+    {
+        Poco::Data::Statement statement( session );
+
+        // See if a table for this type already exists; if not create the table
+        if( !_tableExists( session, tableName ) ) // Table doesn't exist
+        {
+            std::string columnHeaderString = _buildColumnHeaderString( persistable );
+            Poco::Data::Statement sm( session );
+            sm << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
+            if( dbLock.tryLock( DB_LOCK_TIME ) )
+            {
+                CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock" );
+                CS_SQRETRY_PRE
+                sm.execute();
+                CS_SQRETRY_POST
+                dbLock.unlock();
+                CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock" );
+            }
+            else
+            {
+                throw std::runtime_error( "Unable to obtain lock while trying to create table in SQLiteStore::SaveImpl" );
+            }
+        }
+        
+        // Determine whether a record already exists for this PropertySet.
+        // This query will return a non-zero, positive id iff the record exists
+        //int idTest = 0;
+        std::string idTest;
+        
+        CS_SQRETRY_PRE
+        session << "SELECT uuid FROM \"" << tableName << "\" WHERE uuid=:uuid",
+        POCO_KEYWORD_NAMESPACE into( idTest ),
+        POCO_KEYWORD_NAMESPACE use( uuidString ),
+        POCO_KEYWORD_NAMESPACE now;
+        CS_SQRETRY_POST
+        
+        // Since the data binding part will be the same for INSERT and UPDATE
+        // operations on this Persistable, we only need to build the string part
+        // of the query separately.
+        
+        // Will hold the string part of any query we do.
+        std::string query;
+        // Will hold the list of fields in the order added to query.
+        std::vector< std::string > fieldNames;
+        
+        //        if( idTest == 0 ) //  Record does not exist; perform an INSERT
+        if( idTest.empty() )
+        {
+            // Build a query that looks like this:
+            // "INSERT INTO tablename (field1name_1,fieldname_2,...) VALUES (:1,:2,...)"
+            query = "INSERT INTO \"";
+            query.append( tableName );
+            query.append( "\" (uuid," );
+            
+            DatumPtr property;
+            std::vector< std::string > dataList = persistable.GetDataList();
+            std::vector< std::string >::const_iterator it = dataList.begin();
+            while( it != dataList.end() )
+            {
+                property = persistable.GetDatum( *it );
+                // Check for a known type
+                if( ( property->IsBool() ) || ( property->IsDouble() ) ||
+                   ( property->IsFloat() ) || ( property->IsInt() ) ||
+                   ( property->IsString() ) || property->IsBLOB() )
+                {
+                    // Skip the property if its name contains illegal characters
+                    if( !_containsIllegalCharacter( *it ) )
+                    {
+                        query.append( *it );
+                        query.append( "," );
+                        fieldNames.push_back( *it );
+                    }
+                    ++it;
+                }
+                else // Didn't put in field name because we had an unknown type
+                {
+                    ++it;
+                }
+            }
+            
+            // There should be an extra comma at the end of the query that must be
+            // removed. Test for it and remove if it is there.
+            if( query.substr( query.size() - 1, query.size() ) == "," )
+            {
+                query.erase( --query.end() );
+            }
+            
+            query.append( ") VALUES (" );
+            // Put in uuid explicitly since it appears only in INSERT and not
+            // in UPDATE queries
+            query.append( "\"");
+            query.append( uuidString );
+            query.append( "\",");
+            
+            // Put in the binding labels (:0,:1,...) for Poco::Data
+            size_t max = fieldNames.size();
+            for( size_t count = 0; count < max; count++ )
+            {
+                query.append( ":" );
+                query.append( boost::lexical_cast<std::string > ( count ) );
+                query.append( "," );
+            }
+            // There should be an extra comma at the end of the query that must be
+            // removed. Test for it and remove if it is there.
+            if( query.substr( query.size() - 1, query.size() ) == "," )
+            {
+                query.erase( --query.end() );
+            }
+            
+            query.append( ")" );
+        }
+        else // Record exists; perform an UPDATE
+        {
+            // Build a query that looks like:
+            // "UPDATE tablename SET field_0=:0, field_1=:1 WHERE id=mID"
+            query = "UPDATE \"";
+            query.append( tableName );
+            query.append( "\" SET " );
+            
+            //PropertyPtr property;
+            //PropertyMap::const_iterator iterator = mPropertyMap.begin();
+            DatumPtr property;
+            std::vector< std::string > dataList = persistable.GetDataList();
+            std::vector< std::string >::const_iterator it = dataList.begin();
+            while( it != dataList.end() )
+            {
+                property = persistable.GetDatum( *it );
+                // Check for a known type
+                if( ( property->IsBool() ) || ( property->IsDouble() ) ||
+                   ( property->IsFloat() ) || ( property->IsInt() ) ||
+                   ( property->IsString() ) || ( property->IsBLOB() ) )
+                {
+                    // Skip the property if its name contains illegal characters
+                    if( !_containsIllegalCharacter( *it ) )
+                    {
+                        query.append( *it );
+                        query.append( "=:" );
+                        query.append( boost::lexical_cast<std::string > ( fieldNames.size() ) );
+                        query.append( "," );
+                        
+                        fieldNames.push_back( *it );
+                    }
+                    ++it;
+                }
+                else // Didn't put in field name because we had an unknown type
+                {
+                    ++it;
+                }
+            }
+            // There should be an extra comma at the end of the query that must be
+            // removed. Test for it and remove if it is there.
+            if( query.substr( query.size() - 1, query.size() ) == "," )
+            {
+                query.erase( --query.end() );
+            }
+            
+            //            query.append( " WHERE id=" );
+            //            query.append( boost::lexical_cast<std::string > ( mID ) );
+            query.append( " WHERE uuid=\"" );
+            query.append( uuidString );
+            query.append("\"");
+            //std::cout << query << std::endl << std::flush;
+        }
+        
+        // Turn the query into a statement that can accept bound values
+        //Poco::Data::Statement statement( session );
+        statement << query;
+        
+        // The data binding looks the same for either query type (INSERT or UPDATE)
+        BindableAnyWrapper* bindable; // Bindable wrapper for property data
+        DatumPtr property;
+        std::vector<std::string>::iterator it = fieldNames.begin();
+        while( it != fieldNames.end() )
+        {
+            const std::string currentFieldName = ( *it );
+            property = persistable.GetDatum( currentFieldName );
+            bindable = new BindableAnyWrapper;
+            bindableVector.push_back( bindable );
+            bindable->BindValue( &statement, property->GetValue() );
+            ++it;
+        }
+        
+        //std::cout << statement.toString() << std::endl;
+        
+        if( dbLock.tryLock( DB_LOCK_TIME ) )
+        {
+            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #2" );
+            CS_SQRETRY_PRE
+            statement.execute();
+            CS_SQRETRY_POST
+            dbLock.unlock();
+            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #2" );
+        }
+        else
+        {
+            throw std::runtime_error( "Unable to obtain lock while writing data in SQLiteStore::SaveImpl 2" );
+        }
+    }
+    catch( Poco::Data::DataException &e )
+    {
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 2: " << e.displayText() );
+    }
+    catch( std::runtime_error &e )
+    {
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 2: " << e.what() );
+    }
+    catch( ... )
+    {
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 2: Unspecified error when writing to database." );
+    }
+    
+    // Delete the BindableAnyWrapperS that were created in the binding loop
+    std::vector< BindableAnyWrapper* >::iterator biterator =
+    bindableVector.begin();
+    while( biterator != bindableVector.end() )
+    {
+        delete ( *biterator );
+        ++biterator;
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+void SQLiteStore::UpdatePersistableVector( const Persistable& persistable, Poco::Data::Session& session,
+                                              std::string& tableName, std::string& uuidString )
+{
+    // After the top-level entries have been written, we write out any vectorized
+    // quantities which must go in their own sub-table(s)
+    std::vector< BindableAnyWrapper* > bindVector;
+    
+    try
+    {
+        // Open a db transaction. This allows multiple INSERTs and UPDATEs to
+        // happen very quickly. Failure to use a transaction in this instance
+        // will cause lists to take roughly .25 seconds *per item*. With a transaction,
+        // 10,000 items can be inserted or updated in ~1 second.
+        if( dbLock.tryLock( DB_LOCK_TIME ) )
+        {
+            //123        session.begin();
+            CRUNCHSTORE_LOG_TRACE( "SaveImpl Lock #3" );
+            DatumPtr property;
+            std::vector< std::string > dataList = persistable.GetDataList();
+            std::vector< std::string >::const_iterator it = dataList.begin();
+            while( it != dataList.end() )
+            {
+                property = persistable.GetDatum( *it );
+                if( property->IsVectorized() )
+                {
+                    // Vectors (lists) are written into separate tables named
+                    // ParentTable_[ThisPropertyName]. Prefixing with the parent table
+                    // name ensures that property names need not be unique across all property
+                    // sets. For example, PropertySetA might have a property called
+                    // 'Directions' that is a list of strings, and PropertySetB might have a property
+                    // set called 'Directions' that is a list of integers. If the child table is
+                    // simply called "Directions", there could be foreign key overlap in the child table,
+                    // as well as problems with type mis-match. Prefixing with the parent table's
+                    // name prevents such issues.
+                    
+                    enum LISTTYPE
+                    {
+                        UNKNOWN, INTEGER, FLOAT, DOUBLE, STRING
+                    };
+                    LISTTYPE listType = UNKNOWN;
+                    std::string columnType( "" );
+                    
+                    // Determine the list type and set the column type in case the table
+                    // must be created.
+                    if( property->IsIntVector() )
+                    {
+                        listType = INTEGER;
+                        columnType = "INTEGER";
+                    }
+                    else if( property->IsFloatVector() )
+                    {
+                        listType = FLOAT;
+                        columnType = "FLOAT";
+                    }
+                    else if( property->IsDoubleVector() )
+                    {
+                        listType = DOUBLE;
+                        columnType = "DOUBLE";
+                    }
+                    else if( property->IsStringVector() )
+                    {
+                        listType = STRING;
+                        columnType = "TEXT";
+                    }
+                    
+                    if( listType != UNKNOWN )
+                    {
+                        // New (sub)table gets the name
+                        // [ParentTableName]_[currentFieldName]
+                        std::string newTableName( tableName );
+                        newTableName += "_";
+                        std::string fieldName = *it;
+                        newTableName += fieldName;
+                        
+                        // Check for existing table; if table doesn't exist, create it.
+                        if( !_tableExists( session, newTableName ) )
+                        {
+                            CS_SQRETRY_PRE
+                            session << "CREATE TABLE \"" << newTableName <<
+                            "\" (id INTEGER PRIMARY KEY,PropertySetParentID TEXT,"
+                            << fieldName << " " << columnType << ")", POCO_KEYWORD_NAMESPACE now;
+                            CS_SQRETRY_POST
+                        }
+                        
+                        // First part of query will delete everything from the sub-table
+                        // that this propertyset owns. We do this because it is
+                        // much easier than checking whether the data exists
+                        // and attempting to do an update. In the case of a list like this,
+                        // we'd not only have to see if the list already exists in the table,
+                        // but whether it's the same length. Then we'd have to either delete
+                        // rows from the table or insert rows to make the lengths match
+                        // before doing an update. Far easier to wipe out what's there
+                        // and start fresh. It's probably a little slower for large
+                        // lists to do it this way. If lists become a performance
+                        // problem, this is one place to look for possible speedups.
+                        // "DELETE FROM [newtablename] WHERE PropertySetParentID=[id]"
+                        std::string listQuery;
+                        listQuery += "DELETE FROM \"";
+                        listQuery += newTableName;
+                        listQuery += "\" WHERE ";
+                        listQuery += "PropertySetParentID=";
+                        //listQuery += boost::lexical_cast<std::string > ( mID );
+                        listQuery += "\"";
+                        listQuery += uuidString;
+                        listQuery += "\"";
+                        
+                        CS_SQRETRY_PRE
+                        session << listQuery, POCO_KEYWORD_NAMESPACE now;
+                        CS_SQRETRY_POST
+                        listQuery.clear();
+                        
+                        BindableAnyWrapper* bindable;
+                        size_t max = GetBoostAnyVectorSize( property->GetValue() );
+                        for( size_t index = 0; index < max; ++index )
+                        {
+                            // Build up query:
+                            // INSERT INTO [newTableName]
+                            // ([fieldName],PropertySetParentID) VALUES (:num,[mID])
+                            listQuery += "INSERT INTO \"";
+                            listQuery += newTableName;
+                            listQuery += "\" (";
+                            listQuery += fieldName;
+                            listQuery += ",PropertySetParentID) VALUES (:";
+                            listQuery += boost::lexical_cast<std::string > ( index );
+                            listQuery += ",";
+                            //listQuery += boost::lexical_cast<std::string > ( mID );
+                            listQuery += "\"";
+                            listQuery += uuidString;
+                            listQuery += "\"";
+                            listQuery += ")";
+                            
+                            // Turn into a prepared statement that can accept bindings
+                            Poco::Data::Statement listStatement( session );
+                            listStatement << listQuery;
+                            listQuery.clear();
+                            
+                            // Extract data from vector for binding into query
+                            boost::any currentValue;
+                            switch( listType )
+                            {
+                                case INTEGER:
+                                {
+                                    std::vector<int> vec = property->extract< std::vector< int > >();
+                                    currentValue = vec.at( index );
+                                    break;
+                                }
+                                case FLOAT:
+                                {
+                                    std::vector<float> vec = property->extract< std::vector< float > >();
+                                    currentValue = vec.at( index );
+                                    break;
+                                }
+                                case DOUBLE:
+                                {
+                                    std::vector<double> vec = property->extract< std::vector< double > >();
+                                    currentValue = vec.at( index );
+                                    break;
+                                }
+                                case STRING:
+                                {
+                                    std::vector<std::string> vec = property->extract< std::vector< std::string > >();
+                                    currentValue = vec.at( index );
+                                    break;
+                                }
+                                case UNKNOWN:
+                                {
+                                    break;
+                                }
+                            }
+                            
+                            // Bind the data and execute the statement if no binding errors
+                            bindable = new BindableAnyWrapper;
+                            bindVector.push_back( bindable );
+                            if( !bindable->BindValue( &listStatement, currentValue ) )
+                            {
+                                CRUNCHSTORE_LOG_ERROR( "Error in binding data" );
+                            }
+                            else
+                            {
+                                CS_SQRETRY_PRE
+                                listStatement.execute();
+                                CS_SQRETRY_POST
+                            }
+                        }
+                    }
+                }
+                ++it;
+            }
+            // Close the db transaction
+            //123        session.commit();
+            dbLock.unlock();
+            CRUNCHSTORE_LOG_TRACE( "SaveImpl Unlock #3" );
+        }
+        else
+        {
+            throw std::runtime_error( "Unable to obtain lock while writing list data in SQLiteStore::_SaveImpl 3" );
+        }
+    }
+    catch( Poco::Data::DataException &e )
+    {
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 3: " << e.displayText() );
+    }
+    catch( std::runtime_error &e )
+    {
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 3: " << e.what() );
+    }
+    catch( ... )
+    {
+        CRUNCHSTORE_LOG_ERROR( "SQLiteStore::SaveImpl 3: Unspecified error when writing to database." );
+    }
+
+    {
+        // Braces protect scoping of biterator
+        std::vector< BindableAnyWrapper* >::iterator biterator =
+        bindVector.begin();
+        while( biterator != bindVector.end() )
+        {
+            delete ( *biterator );
+            ++biterator;
+        }
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 } // namespace crunchstore

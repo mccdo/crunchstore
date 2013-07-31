@@ -131,6 +131,12 @@ private:
     /// Sleep for 100 ms
     void DoSleep();
     
+    ///Update method
+    void UpdatePersistable( const Persistable& persistable, Poco::Data::Session& session,
+                           std::string& tableName, std::string& uuidString );
+    ///Update method
+    void UpdatePersistableVector( const Persistable& persistable, Poco::Data::Session& session,
+                                 std::string& tableName, std::string& uuidString );
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
 
