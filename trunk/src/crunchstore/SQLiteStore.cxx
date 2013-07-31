@@ -991,8 +991,6 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
     
     try
     {
-        Poco::Data::Statement statement( session );
-
         // See if a table for this type already exists; if not create the table
 //        if( dbLock.tryLock( DB_LOCK_TIME ) )
 //        {
@@ -1162,7 +1160,7 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
         }
         
         // Turn the query into a statement that can accept bound values
-        //Poco::Data::Statement statement( session );
+        Poco::Data::Statement statement( session );
         statement << query;
         
         // The data binding looks the same for either query type (INSERT or UPDATE)
