@@ -29,9 +29,32 @@
 #include <Poco/Data/Session.h>
 #include <Poco/Data/SessionPool.h>
 #include <Poco/Mutex.h>
+#include <Poco/Data/Statement.h>
+
+#include <boost/noncopyable.hpp>
 
 namespace crunchstore
 {
+
+class CRUNCHSTORE_EXPORT StmtObj : public boost::noncopyable
+{
+public:
+    ///
+    StmtObj(
+        Poco::Data::Session const& session );
+    ///
+    ~StmtObj();
+    ///
+    Poco::Data::Session m_session;
+    ///
+    Poco::Data::Statement m_statement;
+    ///
+    Poco::Data::StatementImpl* m_statementImpl;
+protected:
+    ///
+    StmtObj();
+};
+
 
 class CRUNCHSTORE_EXPORT SQLiteStore : public Store
 {
@@ -137,6 +160,13 @@ private:
     ///Update method
     void UpdatePersistableVector( const Persistable& persistable, Poco::Data::Session& session,
                                  std::string& tableName, std::string& uuidString );
+
+    ///Retries a query if DataException or InvalidAccessException is thrown
+    bool ExecuteRetry( StmtObj& stmtObj,
+                       bool const& reset = true,
+                       unsigned int const& maxRetryAttempts = 5,
+                       unsigned int const& retrySleep = 100 );
+
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
 
