@@ -186,6 +186,8 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         return;
     }
 
+    Poco::Mutex::ScopedLock lock( dbLock );
+
     bool transactionInProgress;
     Poco::Data::Session session( GetSessionByKey( transactionKey, transactionInProgress ) );
     SetupDBProperties( session );
@@ -202,46 +204,51 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
 
     try
     {
-        if( dbLock.tryLock( DB_LOCK_TIME ) )
+        //if( dbLock.tryLock( DB_LOCK_TIME ) )
         {
             if( !transactionInProgress )
             {
                 // If we're not inside of a larger transaction, make this save
                 // operation its own single transaction.
-                CS_SQRETRY_PRE
-                session.begin();
-                CS_SQRETRY_POST
+                //CS_SQRETRY_PRE
+                //session.begin();
+                //CS_SQRETRY_POST
             }
             UpdatePersistable( persistable, session, tableName, uuidString );
             UpdatePersistableVector( persistable, session, tableName, uuidString );
             if( !transactionInProgress )
             {
                 // Commit the transaction only if we opened one just above.
-                session.commit();
+                //session.commit();
             }
-            dbLock.unlock();
+            //dbLock.unlock();
         }
-        else
+        /*else
         {
             throw std::runtime_error( "Unable to acquire lock in SQLiteStore::SaveImpl" );
-        }
+        }*/
     }
     catch( Poco::Data::DataException &e )
     {
         CRUNCHSTORE_LOG_ERROR( "SaveImpl DataException : " << e.displayText() );
+        //dbLock.unlock();
+        session.close();
         throw;
     }
     catch( std::runtime_error &e )
     {
         CRUNCHSTORE_LOG_ERROR( "SaveImpl runtime_error : " << e.what() );
+        //dbLock.unlock();
+        session.close();
         throw;
     }
     catch( ... )
     {
         CRUNCHSTORE_LOG_ERROR( "SaveImpl : Unspecified error when writing to database." );
+        //dbLock.unlock();
+        session.close();
         throw;
     }
-
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::LoadImpl( Persistable& persistable, Role,
