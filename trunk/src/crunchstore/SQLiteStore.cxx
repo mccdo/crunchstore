@@ -32,6 +32,7 @@
 #include <Poco/Data/SQLite/Connector.h>
 #include <Poco/Data/RecordSet.h>
 #include <Poco/Data/SQLite/SQLiteException.h>
+#include <Poco/Data/DataException.h>
 #include <Poco/Thread.h>
 DIAG_OFF(unused-parameter)
 #include <Poco/Version.h>
@@ -1226,21 +1227,25 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
 //        statement.execute();
 //        CS_SQRETRY_POST
         ExecuteRetry( statement );
+        //std::cout << statement.m_statement.done() << std::endl;
+        //std::cout << statement.m_statementImpl->getState() << std::endl;
+        
+           // Poco::Thread::sleep( 100 );
     }
     catch( Poco::Data::DataException &e )
     {
         CRUNCHSTORE_LOG_ERROR( "SaveImpl 2: " << e.displayText() );
-        throw;
+        //throw;
     }
     catch( std::runtime_error &e )
     {
         CRUNCHSTORE_LOG_ERROR( "SaveImpl 2: " << e.what() );
-        throw;
+        //throw;
     }
     catch( ... )
     {
         CRUNCHSTORE_LOG_ERROR( "SaveImpl 2: Unspecified error when writing to database." );
-        throw;
+        //throw;
     }
     
     // Delete the BindableAnyWrapperS that were created in the binding loop
@@ -1506,17 +1511,39 @@ bool SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
             }
             success = true;
         }
-        catch( Poco::Data::DataException const& )
+        catch( Poco::Data::ExtractException const& e )
+        {
+            dataEx = false;
+            //impl.reset();
+            Poco::Thread::sleep( 100 );
+            //return true;
+            //std::cout << "de "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+        }
+        catch( Poco::Data::SQLite::DBLockedException const& e )
         {
             dataEx = true;
             Poco::Thread::sleep( retrySleep );
-
+            //std::cout << "da "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
         }
-        catch( Poco::InvalidAccessException const& )
+        catch( Poco::Data::DataException const& e )
+        {
+            dataEx = true;
+            Poco::Thread::sleep( retrySleep );
+            //std::cout << "da "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+        }
+        catch( Poco::InvalidAccessException const& e)
         {
             dataEx = false;
             impl.reset();
             Poco::Thread::sleep( retrySleep );
+            //std::cout << "ia"<< e.displayText()  << " " << e.name() << std::endl;
+        }
+        catch( ... )
+        {
+            //dataEx = false;
+            //impl.reset();
+            //Poco::Thread::sleep( retrySleep );
+            //std::cout << "another one"<< std::endl;
         }
     }
 
