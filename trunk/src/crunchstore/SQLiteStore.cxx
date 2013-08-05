@@ -1513,6 +1513,8 @@ bool SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
         }
         catch( Poco::Data::ExtractException const& e )
         {
+            std::cout << "de "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+            throw;
             dataEx = false;
             //impl.reset();
             Poco::Thread::sleep( 100 );
