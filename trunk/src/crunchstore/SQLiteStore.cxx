@@ -1075,9 +1075,19 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
             statement.m_statement << "SELECT uuid FROM \"" << tableName << "\" WHERE uuid=:uuid",
                    POCO_KEYWORD_NAMESPACE into( idTest ),
                    POCO_KEYWORD_NAMESPACE use( uuidString );
-            ExecuteRetry( statement );
+            try
+            {
+                ExecuteRetry( statement );
+            }
+            catch( Poco::Data::ExtractException const& e )
+            {
+                //if we have already extracted this data then the statement is already present
+                idTest = "1";
+                //std::cout << tableName << " " << uuidString << " " << idTest << std::endl << std::flush;
+            }
         }
-        
+        //std::cout << tableName << " " << uuidString << " " << idTest << std::endl << std::flush;
+
         // Since the data binding part will be the same for INSERT and UPDATE
         // operations on this Persistable, we only need to build the string part
         // of the query separately.
@@ -1221,16 +1231,10 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
             ++it;
         }
         
-        //std::cout << statement.toString() << std::endl;
         
-//        CS_SQRETRY_PRE
-//        statement.execute();
-//        CS_SQRETRY_POST
+        //std::cout <<statement.m_statementImpl->getState() << " " << statement.m_statement.toString() << std::endl << std::flush;
+        //Poco::Thread::sleep( 50 );
         ExecuteRetry( statement );
-        //std::cout << statement.m_statement.done() << std::endl;
-        //std::cout << statement.m_statementImpl->getState() << std::endl;
-        
-           // Poco::Thread::sleep( 100 );
     }
     catch( Poco::Data::DataException &e )
     {
@@ -1513,8 +1517,11 @@ bool SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
         }
         catch( Poco::Data::ExtractException const& e )
         {
-            std::cout << "de "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
-            throw;
+            impl.reset();
+            e.rethrow();
+            //std::cout << "de "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+            //return true;
+            //throw;
             dataEx = false;
             //impl.reset();
             Poco::Thread::sleep( 100 );
