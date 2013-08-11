@@ -167,6 +167,10 @@ private:
                        unsigned int const& maxRetryAttempts = 5,
                        unsigned int const& retrySleep = 100 );
 
+    ///Get a session
+    Poco::Data::Session GetSession( unsigned int const& maxRetryAttempts = 100,
+                                   unsigned int const& retrySleep = 100 );
+
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
 
