@@ -150,7 +150,7 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
         return false;
     }
 
-    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session( GetSession() );
     SetupDBProperties( session );
 
     return _tableExists( session, typeName );
@@ -540,7 +540,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
         return false;
     }
 
-    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session( GetSession() );
     SetupDBProperties( session );
 
     if( !_tableExists( session, typeName ) )
@@ -601,7 +601,7 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
         return;
     }
 
-    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session( GetSession() );
     SetupDBProperties( session );
 
     //Poco::Data::Statement statement( session );
@@ -633,7 +633,7 @@ void SQLiteStore::Search( const std::string& typeName,
         return;
     }
 
-    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session( GetSession() );
     SetupDBProperties( session );
 
     if( !_tableExists( session, typeName ) )
@@ -929,7 +929,7 @@ void SQLiteStore::Drop( const std::string& typeName, Role )
     }
 
 
-    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session( GetSession() );
     CRUNCHSTORE_LOG_TRACE( "Drop: session acquired" );
     SetupDBProperties( session );
 
@@ -959,7 +959,7 @@ SQLiteTransactionKey SQLiteStore::BeginTransaction()
     CRUNCHSTORE_LOG_INFO( "Opening bulk mode on SQLiteStore" );
     std::cout <<  "Opening bulk mode on SQLiteStore" << std::endl << std::flush;
 
-    Poco::Data::Session session( m_pool->get() );
+    Poco::Data::Session session( GetSession() );
     session.begin();
     SQLiteTransactionKey key( session );
     return key;
@@ -993,14 +993,14 @@ Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transact
         {
             //std::cout << "Key not set..." << std::flush;
             transactionInProgress = false;
-            return m_pool->get();
+            return GetSession();
         }
     }
     else
     {
         //std::cout << "Wrong key type..." << transactionKey.GetTypeString() << std::flush;
         transactionInProgress = false;
-        return m_pool->get();
+        return GetSession();
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -1560,6 +1560,31 @@ bool SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
     }
 
     return success;
+}
+////////////////////////////////////////////////////////////////////////////////
+Poco::Data::Session SQLiteStore::GetSession(
+                   unsigned int const& maxRetryAttempts,
+                   unsigned int const& retrySleep )
+{
+    unsigned int cnt( 0 );
+    while( ++cnt <= maxRetryAttempts )
+    {
+        try
+        {
+            return m_pool->get();
+        }
+        catch( Poco::Data::ExecutionException const& )
+        {
+            ;
+        }
+        catch( Poco::Exception const& ex )
+        {
+            ex.rethrow();
+        }
+        Poco::Thread::sleep( retrySleep );
+    }
+    
+    throw std::runtime_error( "SQLiteStore::GetSession failed" );
 }
 ////////////////////////////////////////////////////////////////////////////////
 } // namespace crunchstore
