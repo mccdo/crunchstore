@@ -95,12 +95,10 @@ SQLiteStore::SQLiteStore():
 {
     m_logStream = LogStreamPtr( new Poco::LogStream( m_logger ) );
     CRUNCHSTORE_LOG_TRACE( "ctor" );
-    //std::cout << "SQL: " << this << std::endl << std::flush;
 }
 ////////////////////////////////////////////////////////////////////////////////
 SQLiteStore::~SQLiteStore()
 {
-    //std::cout << "$$$$$ ~SQLiteStore" << std::endl << std::flush;
     Detach();
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -121,8 +119,6 @@ void SQLiteStore::SetStorePath( const std::string& path )
 void SQLiteStore::Attach()
 {
     CRUNCHSTORE_LOG_TRACE( "Attach" );
-    //std::cout << "SQLiteStore::Attach: using path "
-    //          << m_path << std::endl << std::flush;
     if( m_pool )
     {
         delete m_pool;
@@ -144,7 +140,6 @@ void SQLiteStore::Attach()
 bool SQLiteStore::HasTypeName( const std::string& typeName )
 {
     CRUNCHSTORE_LOG_TRACE( "HasTypeName: " << typeName );
-    //std::cout << "SQLiteStore::HasTypeName" << std::endl << std::flush;
     if( !m_pool )
     {
         return false;
@@ -159,7 +154,6 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
 void SQLiteStore::Detach()
 {
     CRUNCHSTORE_LOG_TRACE( "Detach" );
-    //std::cout << "SQLiteStore::Detach" << std::endl << std::flush;
     if( m_pool )
     {
         //std::cout << "Number of idle Poco::Sessions " << m_pool->idle()
@@ -188,7 +182,6 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
     }
 
     Poco::Mutex::ScopedLock lock( dbLock );
-    //std::cout << m_pool->dead() << " " << m_pool->used() << " " << m_pool->allocated() << std::endl;
     // Need to have explicitly named variables if we want to be able to bind
     // with Poco::Data
     std::string tableName = persistable.GetTypeName();
@@ -205,14 +198,12 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
         Poco::Data::Session session( GetSessionByKey( transactionKey, transactionInProgress ) );
         SetupDBProperties( session );
 
-        //if( dbLock.tryLock( DB_LOCK_TIME ) )
-        {
             if( !transactionInProgress )
             {
                 // If we're not inside of a larger transaction, make this save
                 // operation its own single transaction.
                 //CS_SQRETRY_PRE
-                //session.begin();
+                session.begin();
                 //CS_SQRETRY_POST
             }
             UpdatePersistable( persistable, session, tableName, uuidString );
@@ -220,16 +211,8 @@ void SQLiteStore::SaveImpl( const Persistable& persistable,
             if( !transactionInProgress )
             {
                 // Commit the transaction only if we opened one just above.
-                //session.commit();
+                session.commit();
             }
-            //dbLock.unlock();
-        }
-        /*else
-        {
-            throw std::runtime_error( "Unable to acquire lock in SQLiteStore::SaveImpl" );
-        }*/
-        //session.createStatementImpl()->reset();
-        //session.close();
     }
     catch( Poco::Data::DataException &e )
     {
@@ -252,15 +235,12 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
                             const TransactionKey& transactionKey )
 {
     CRUNCHSTORE_LOG_TRACE( "LoadImpl" );
-    //std::cout << "SQLiteStore::LoadImpl " << std::endl << std::flush;
     
     if( !m_pool )
     {
         return;
     }
 
-    //Poco::Mutex::ScopedLock lock( dbLock );
-//123    Poco::Data::Session session( m_pool->get() );
     bool transactionInProgress;
     Poco::Data::Session session = GetSessionByKey( transactionKey, transactionInProgress );
     SetupDBProperties( session );
@@ -467,8 +447,6 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
         ++it;
     }
 
-    //std::cout << "SQLiteStore::LoadImpl done." << std::endl << std::flush;
-
     // If we have just loaded a dataset, the change accumulator will be full
     // of changes and it will appear as though the set is dirty and needs to
     // be written back to the database. To prevent an unnecessary write, we
@@ -485,7 +463,6 @@ void SQLiteStore::Remove( Persistable& persistable, Role,
                           const TransactionKey& transactionKey )
 {
     CRUNCHSTORE_LOG_TRACE( "Remove" );
-    //std::cout << "SQLiteStore::Remove" << std::endl << std::flush;
     if( !m_pool )
     {
         return;
@@ -534,7 +511,6 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
                                     Role )
 {
     CRUNCHSTORE_LOG_TRACE( "HasIDForTypename" );
-    //std::cout << "SQLiteStore::HasIDForTypename " << typeName << std::endl << std::flush;
     if( !m_pool )
     {
         return false;
@@ -552,10 +528,7 @@ bool SQLiteStore::HasIDForTypename( const boost::uuids::uuid& id,
     // This query will return a non-empty string iff the record exists
     int idTest;
     std::string idString = boost::lexical_cast< std::string >( id );
-    //std::cout << "SQLiteStore::HasIDForTypename id = " << idString << std::endl << std::flush;
 
-
-    //Poco::Data::Statement statement( session );
     StmtObj statement( session );
     statement.m_statement << "SELECT COUNT (*) FROM \"" << typeName << "\" WHERE uuid=?",
             POCO_KEYWORD_NAMESPACE into( idTest ),
@@ -595,7 +568,6 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
                                      Role )
 {
     CRUNCHSTORE_LOG_TRACE( "GetIDsForTypename" );
-    //std::cout << "SQLiteStore::GetIDsForTypename" << std::endl << std::flush;
     if( !m_pool )
     {
         return;
@@ -604,7 +576,6 @@ void SQLiteStore::GetIDsForTypename( const std::string& typeName,
     Poco::Data::Session session( GetSession() );
     SetupDBProperties( session );
 
-    //Poco::Data::Statement statement( session );
     StmtObj statement( session );
 
     statement.m_statement << "SELECT uuid FROM " << typeName, POCO_KEYWORD_NAMESPACE into( resultIDs );
@@ -627,7 +598,6 @@ void SQLiteStore::Search( const std::string& typeName,
                           std::vector< std::string >& results )
 {
     CRUNCHSTORE_LOG_TRACE( "Search" );
-    //std::cout << "SQLiteStore::Search" << std::endl << std::flush;
     if( !m_pool )
     {
         return;
@@ -1088,8 +1058,6 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
                 //idTest = "1";
             }
         }
-        //std::cout << tableName << " " << uuidString << " " << idTest << std::endl << std::flush;
-        //std::cout << tableName << " " << uuidString << " " << idTest << std::endl << std::flush;
 
         // Since the data binding part will be the same for INSERT and UPDATE
         // operations on this Persistable, we only need to build the string part
@@ -1212,11 +1180,9 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
             query.append( " WHERE uuid=\"" );
             query.append( uuidString );
             query.append("\"");
-            //std::cout << query << std::endl << std::flush;
         }
         
         // Turn the query into a statement that can accept bound values
-        //Poco::Data::Statement statement( session );
         StmtObj statement( session );
         statement.m_statement << query;
         
@@ -1523,32 +1489,25 @@ bool SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
             impl.reset();
             e.rethrow();
             //std::cout << "de "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
-            //return true;
-            //throw;
-            dataEx = false;
-            //impl.reset();
-            Poco::Thread::sleep( 100 );
-            //return true;
-            //std::cout << "de "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
         }
         catch( Poco::Data::SQLite::DBLockedException const& e )
         {
             dataEx = true;
             Poco::Thread::sleep( retrySleep );
-            std::cout << "dlock "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+            //std::cout << "dlock "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
         }
         catch( Poco::Data::DataException const& e )
         {
             dataEx = true;
             Poco::Thread::sleep( retrySleep );
-            std::cout << "da "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+            //std::cout << "da "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
         }
         catch( Poco::InvalidAccessException const& e)
         {
             dataEx = false;
             impl.reset();
             Poco::Thread::sleep( retrySleep );
-            std::cout << "ia"<< e.displayText()  << " " << e.name() << std::endl;
+            //std::cout << "ia"<< e.displayText()  << " " << e.name() << std::endl;
         }
         catch( ... )
         {
