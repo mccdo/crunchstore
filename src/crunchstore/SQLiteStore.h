@@ -169,7 +169,7 @@ private:
 
     ///Get a session
     Poco::Data::Session GetSession( unsigned int const& maxRetryAttempts = 100,
-                                   unsigned int const& retrySleep = 100 );
+                                   unsigned int const& retrySleep = 30 );
 
     /// Holds the session pool
     Poco::Data::SessionPool* m_pool;
