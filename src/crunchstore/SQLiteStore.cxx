@@ -1457,68 +1457,59 @@ void SQLiteStore::UpdatePersistableVector( const Persistable& persistable, Poco:
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-bool SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
-                                bool const& reset,
+void SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
                                 unsigned int const& maxRetryAttempts,
                                 unsigned int const& retrySleep )
 {
     Poco::Data::Statement& stmt = stmtObj.m_statement;
-    //This method does not support asynchronous queries
-    if( stmt.isAsync() ) return false;
+    if( stmt.isAsync() )
+    {
+        throw std::runtime_error(
+            "SQLiteStore::ExecuteRetry does not support asynchronous queries" );
+    }
+    
     Poco::Data::StatementImpl& impl = *( stmtObj.m_statementImpl );
-
-    bool success( false ), dataEx( true );
     unsigned int cnt( 0 );
-    while( !success && ( ++cnt <= maxRetryAttempts ) )
+    while( ++cnt <= maxRetryAttempts )
     {
         try
         {
-            if( dataEx )
+            if( cnt == 1 )
             {
+                //The first time we try to execute the statement. Every time
+                //after this if the first time failed we just need to reset
+                //and execute the implmentation. If we reset the statement
+                //then we will cause a recompile and a rebind of all of the
+                //variables.
+                //To find more details about this method look at
+                //Poco::Data::Statement.cpp file in the execute method.
                 stmt.execute();
             }
             else
             {
-                if( stmt.done() ) impl.reset();
-                impl.execute( reset );
+                //Just reset the statement implementation so that we do not
+                //recompile the complete statement.
+                impl.reset();
+                impl.execute( true );
             }
-            success = true;
+            return;
         }
-        catch( Poco::Data::ExtractException const& e )
+        catch( Poco::Data::SQLite::DBLockedException const& )
         {
-            impl.reset();
-            e.rethrow();
-            //std::cout << "de "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+            ;
         }
-        catch( Poco::Data::SQLite::DBLockedException const& e )
+        catch( Poco::Data::SQLite::TableLockedException const& )
         {
-            dataEx = true;
-            Poco::Thread::sleep( retrySleep );
-            //std::cout << "dlock "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+            ;
         }
-        catch( Poco::Data::DataException const& e )
+        catch( Poco::Exception const& ex )
         {
-            dataEx = true;
-            Poco::Thread::sleep( retrySleep );
-            //std::cout << "da "<< e.displayText()  << " " << e.name() << " " << e.className() << std::endl;
+            ex.rethrow();
         }
-        catch( Poco::InvalidAccessException const& e)
-        {
-            dataEx = false;
-            impl.reset();
-            Poco::Thread::sleep( retrySleep );
-            //std::cout << "ia"<< e.displayText()  << " " << e.name() << std::endl;
-        }
-        catch( ... )
-        {
-            //dataEx = false;
-            //impl.reset();
-            //Poco::Thread::sleep( retrySleep );
-            std::cout << "another one"<< std::endl;
-        }
+        Poco::Thread::sleep( retrySleep );
     }
-
-    return success;
+    
+    throw std::runtime_error( "SQLiteStore::ExecuteRetry failed" );
 }
 ////////////////////////////////////////////////////////////////////////////////
 Poco::Data::Session SQLiteStore::GetSession(

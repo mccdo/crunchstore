@@ -162,8 +162,7 @@ private:
                                  std::string& tableName, std::string& uuidString );
 
     ///Retries a query if DataException or InvalidAccessException is thrown
-    bool ExecuteRetry( StmtObj& stmtObj,
-                       bool const& reset = true,
+    void ExecuteRetry( StmtObj& stmtObj,
                        unsigned int const& maxRetryAttempts = 5,
                        unsigned int const& retrySleep = 100 );
 
