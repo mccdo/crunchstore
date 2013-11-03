@@ -154,14 +154,19 @@ bool SQLiteStore::HasTypeName( const std::string& typeName )
 void SQLiteStore::Detach()
 {
     CRUNCHSTORE_LOG_TRACE( "Detach" );
-    if( m_pool )
+    //With poco 1.5.x unregisterConnector should not be called multiple times
+    //for a single connection.
+    if( !m_pool )
     {
-        //std::cout << "Number of idle Poco::Sessions " << m_pool->idle()
-        //    << " Number of dead Poco::Sessions " << m_pool->dead() << std::endl;
-        //This must be deleted from the thread that it was created from
-        delete m_pool;
-        m_pool = 0;
+        return;
     }
+
+    //std::cout << "Number of idle Poco::Sessions " << m_pool->idle()
+    //    << " Number of dead Poco::Sessions " << m_pool->dead() << std::endl;
+    //This must be deleted from the thread that it was created from
+    delete m_pool;
+    m_pool = 0;
+
     try
     {
         Poco::Data::SQLite::Connector::unregisterConnector();
