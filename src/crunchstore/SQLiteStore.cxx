@@ -36,7 +36,7 @@
 #include <Poco/Thread.h>
 DIAG_OFF(unused-parameter)
 #include <Poco/Version.h>
-#if POCO_VERSION > 01050000
+#if POCO_VERSION > 0x01050000
     #include <Poco/Data/LOB.h>
     #define POCO_KEYWORD_NAMESPACE Poco::Data::Keywords::
 #else
@@ -735,8 +735,11 @@ bool SQLiteStore::_tableExists( Poco::Data::Session& session, std::string const&
     StmtObj statement( session );
     statement.m_statement << "SELECT 1 FROM sqlite_master WHERE type='table' AND name=:name",
             POCO_KEYWORD_NAMESPACE into( tableExists ),
+#if POCO_VERSION > 0x01050000
             POCO_KEYWORD_NAMESPACE useRef( TableName );
-
+#else
+            POCO_KEYWORD_NAMESPACE use( TableName );
+#endif
     // "SELECT 1 ... will put a 1 (true) into the boolean value if the tablename
     // is found in the database.
     try
@@ -981,7 +984,7 @@ Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transact
 ////////////////////////////////////////////////////////////////////////////////
 void SQLiteStore::SetupDBProperties( Poco::Data::Session& session )
 {
-#if POCO_VERSION < 01050000
+#if POCO_VERSION < 0x01050000
     try
     {
         session.setProperty( "maxRetryAttempts", 4 );
@@ -1467,12 +1470,13 @@ void SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
                                 unsigned int const& retrySleep )
 {
     Poco::Data::Statement& stmt = stmtObj.m_statement;
+#if POCO_VERSION > 0x01050000
     if( stmt.isAsync() )
     {
         throw std::runtime_error(
             "SQLiteStore::ExecuteRetry does not support asynchronous queries" );
     }
-    
+#endif 
     Poco::Data::StatementImpl& impl = *( stmtObj.m_statementImpl );
     unsigned int cnt( 0 );
     while( ++cnt <= maxRetryAttempts )
@@ -1495,7 +1499,11 @@ void SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
                 //Just reset the statement implementation so that we do not
                 //recompile the complete statement.
                 impl.reset();
+#if POCO_VERSION > 0x01050000
                 impl.execute( true );
+#else
+                impl.execute();
+#endif
             }
             return;
         }

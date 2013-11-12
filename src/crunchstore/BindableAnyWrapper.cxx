@@ -23,7 +23,7 @@
 #include <Poco/Data/Statement.h>
 DIAG_OFF(unused-parameter)
 #include <Poco/Version.h>
-#if POCO_VERSION > 01050000
+#if POCO_VERSION > 0x01050000
     #include <Poco/Data/LOBStream.h>
     #define POCO_KEYWORD_NAMESPACE Poco::Data::Keywords::
 #else

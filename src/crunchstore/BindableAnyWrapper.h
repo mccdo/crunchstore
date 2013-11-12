@@ -24,7 +24,7 @@
 #include <crunchstore/CompilerGuards.h>
 DIAG_OFF(unused-parameter)
 #include <Poco/Version.h>
-#if POCO_VERSION > 01050000
+#if POCO_VERSION > 0x01050000
     #include <Poco/Data/LOB.h>
 #else
     #include <Poco/Data/BLOB.h>
@@ -65,8 +65,11 @@ private:
     float mFloat;
     double mDouble;
     std::string mString;
+#if POCO_VERSION > 0x01050000
     Poco::Data::CLOB mBLOB;
-
+#else
+    Poco::Data::BLOB mBLOB;
+#endif
 };
 
 } // namespace crunchstore
