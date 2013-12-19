@@ -33,7 +33,7 @@ typedef boost::shared_ptr<Poco::LogStream>  LogStreamPtr;
 }
 
 #define _CRUNCHSTORE_LOG_CALL( prio, msg ) do {if( m_logger.prio() ){ (*m_logStream).prio() << msg << std::endl; } } while( 0 )
-#define _CRUNCHSTORE_STATIC_LOG_CALL( prio, name, msg ) do { Poco::Logger& logger = Poco::Logger::get( name ); if( logger.prio() ){Poco::LogStream logstream( logger ); logstream.information() << msg << std::endl; } } while( 0 )
+#define _CRUNCHSTORE_STATIC_LOG_CALL( prio, name, msg ) do { Poco::Logger& logger = Poco::Logger::get( name ); if( logger.prio() ){Poco::LogStream logstream( logger ); logstream.prio() << msg << std::endl; } } while( 0 )
 
 /// Use these logging macros in classes that have a dedicated m_logger and m_logStream.
 /// This method has faster execution that the static method below since the log
