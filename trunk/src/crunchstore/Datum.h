@@ -27,6 +27,7 @@
 
 #include <crunchstore/ExportConfig.h>
 #include <crunchstore/DatumPtr.h>
+#include <crunchstore/Exception.h>
 
 // TODO: Check through const status everywhere
 
@@ -106,7 +107,8 @@ public:
             e.append( m_value.type().name() );
             e += " to ";
             e.append( typeid(T).name() );
-            throw e.c_str();
+            //throw e.c_str();
+            throw Exception( "Invalid Datum cast", e );
         }
     }
 

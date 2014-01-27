@@ -102,7 +102,7 @@ public:
                               DatumPtr datum );
 
     /// Returns a pointer to the datum identified by datumName
-    /// @throws std::runtime_error if datum does not exist
+    /// @throws crunchstore::Exception if datum does not exist
     virtual DatumPtr GetDatum( std::string const& datumName ) const;
 
     /// Sets the main value of the datum identified by datumName to value.
@@ -111,7 +111,7 @@ public:
 
     /// Returns the main value of the datum identified by datumName, converted
     /// to type T. Example: persist.GetDatumValue< double >( "MyDouble" );
-    /// @throws std::runtime_error if datum does not exist
+    /// @throws crunchstore::Exception if datum does not exist
     template <typename T>
             T GetDatumValue( std::string const& datumName ) const
     {
@@ -127,6 +127,7 @@ public:
     /// to the Persistable.
     virtual const std::vector<std::string>& GetDataList() const;
 // --/
+
 
 protected:
 
@@ -156,6 +157,7 @@ protected:
     mutable std::string m_UUIDString;
 
 private:
+
     /// Flag to tell whether we've assigned a UUID. The creation of
     /// a UUID is expensive, so we delay creation until it is needed because
     /// there will be many cases in which application code explicitly sets

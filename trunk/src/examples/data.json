@@ -1,0 +1,12 @@
+{
+    "typename" : "DC",
+    "data" :
+    {
+        "Col1" : 1234,
+        "Col2" : 6.626,
+        "Col3" : "De-Serialized from JSON",
+        "Col4" : true,
+        "Col5" : [ 9.9, 8.8, 7.7 ],
+        "uuid" : "ffc60101-f9e1-40e3-9e19-713c0dc6e830"
+    }
+}

@@ -37,3 +37,26 @@ INSTALL(
         RUNTIME DESTINATION ${INSTALL_BINDIR}
     )
 
+
+###############################################################################
+if( NOT( "${POCO_PocoJSON_LIBRARY}" STREQUAL "" ))
+
+set( srcs asMember.cxx )
+
+SET(TARGET_SRC ${srcs})
+
+SET(TARGET_NAME asMemberTest)
+ADD_EXECUTABLE(${TARGET_NAME} ${TARGET_SRC})
+TARGET_LINK_LIBRARIES(${TARGET_NAME} crunchstore ${MONGO_DRIVER_LIBS} ${Boost_LIBRARIES} rt)
+
+SET(INSTALL_BINDIR bin)
+
+INSTALL(
+        TARGETS ${TARGET_NAME}
+        RUNTIME DESTINATION ${INSTALL_BINDIR}
+    )
+
+install(FILES data.json
+    DESTINATION bin
+    COMPONENT development)
+endif()
