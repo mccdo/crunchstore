@@ -18,7 +18,7 @@
  *
  *************** <auto-copyright.rb END do not edit this line> ***************/
 #include <crunchstore/Persistable.h>
-
+#include <crunchstore/Exception.h>
 #include <crunchstore/Datum.h>
 
 #include <sstream>
@@ -37,19 +37,13 @@ namespace crunchstore
 
 ////////////////////////////////////////////////////////////////////////////////
 Persistable::Persistable():
-    //m_UUID( boost::uuids::random_generator()() )
     m_uuidSet( false )
 {
-    //m_UUIDString = boost::lexical_cast< std::string >( m_UUID );
-    //m_typename = m_UUIDString;
-    //boost::algorithm::erase_all( m_typename, "-" );
 }
 ////////////////////////////////////////////////////////////////////////////////
 Persistable::Persistable( const std::string& typeName ):
-    //m_UUID( boost::uuids::random_generator()() )
     m_uuidSet( false )
 {
-    //m_UUIDString = boost::lexical_cast< std::string >( m_UUID );
     m_typename = typeName;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -206,11 +200,9 @@ DatumPtr Persistable::GetDatum( std::string const& datumName ) const
         //        graceful failure rather than a crash.
         // Cons: *User either has to test for existence of Datum before calling
         //        GetDatum or has to wrap access in try/catch block.
-        std::string error( "Persistable::GetDatum: No datum named " );
-        error += datumName;
-        error += " in Persistable named " + m_typename;
-        throw std::runtime_error( error );
-        //return DatumPtr();
+        std::string error( "No datum named " );
+        error += datumName + " in Persistable named " + m_typename;
+        throw Exception( "Invalid Datum name", error );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////

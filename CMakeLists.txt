@@ -18,6 +18,15 @@ endif()
 
 set(POCO_ROOT "Please specify" CACHE PATH "Root directory where POCO is installed" )
 find_package(POCO 1.4.1 REQUIRED COMPONENTS PocoFoundation PocoUtil PocoXML PocoData PocoDataSQLite)
+find_package(POCO 1.5.1 COMPONENTS PocoFoundation PocoUtil PocoXML PocoData PocoDataSQLite PocoJSON)
+
+# The Poco finder doesn't set the usual per-component variables such as
+# POCO_PocoJSON_FOUND, so we have to look for the library name itself
+#if( NOT( "${POCO_PocoJSON_LIBRARY}" STREQUAL "" ))
+#    message( "Found PocoJSON")
+#else()
+#    message( "No PocoJSON")
+#endif()
 
 # should we build in mongoDB support?
 #option(USE_MONGO "Build mongoDB adapter?" ON)

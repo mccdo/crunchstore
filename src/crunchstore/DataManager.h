@@ -62,8 +62,8 @@ public:
                  BufferBase::BufferPriority priority = BufferBase::NORMAL_PRIORITY );
 
 private:
-    DataAbstractionLayerPtr m_buffer;
     DataAbstractionLayerPtr m_dataMultiplexer;
+    DataAbstractionLayerPtr m_buffer;
 };
 
 } // namespace crunchstore

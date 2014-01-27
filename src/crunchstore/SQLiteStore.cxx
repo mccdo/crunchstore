@@ -23,6 +23,7 @@
 #include <crunchstore/Persistable.h>
 #include <crunchstore/BindableAnyWrapper.h>
 #include <crunchstore/SearchCriterion.h>
+#include <crunchstore/Exception.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -1032,10 +1033,6 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
             //Poco::Data::Statement sm( session );
             StmtObj statement( session );
             statement.m_statement << "CREATE TABLE \"" << tableName << "\" (" << columnHeaderString << ")";
-
-//            CS_SQRETRY_PRE
-//            statement.execute();
-//            CS_SQRETRY_POST
             ExecuteRetry( statement );
         }
 
@@ -1044,13 +1041,6 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
         //int idTest = 0;
         int idTest;
         
-//        CS_SQRETRY_PRE
-//        session << "SELECT uuid FROM \"" << tableName << "\" WHERE uuid=:uuid",
-//        POCO_KEYWORD_NAMESPACE into( idTest ),
-//        POCO_KEYWORD_NAMESPACE use( uuidString ),
-//        POCO_KEYWORD_NAMESPACE now;
-//        CS_SQRETRY_POST
-        //Poco::Data::Statement statement( session );
         {
             StmtObj statement( session );
             statement.m_statement << "SELECT COUNT (*) FROM \"" << tableName << "\" WHERE uuid=?",
@@ -1210,7 +1200,6 @@ void SQLiteStore::UpdatePersistable( const Persistable& persistable, Poco::Data:
         
         
         //std::cout <<statement.m_statementImpl->getState() << " " << statement.m_statement.toString() << std::endl << std::flush;
-        //Poco::Thread::sleep( 50 );
         ExecuteRetry( statement );
     }
     catch( Poco::Data::DataException &e )
@@ -1473,8 +1462,8 @@ void SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
 #if POCO_VERSION > 0x01050000
     if( stmt.isAsync() )
     {
-        throw std::runtime_error(
-            "SQLiteStore::ExecuteRetry does not support asynchronous queries" );
+        throw Exception( "SQLiteStore::ExecuteRetry error",
+            "Attempted to use unsupported Async mode." );
     }
 #endif 
     Poco::Data::StatementImpl& impl = *( stmtObj.m_statementImpl );
@@ -1522,7 +1511,7 @@ void SQLiteStore::ExecuteRetry( StmtObj& stmtObj,
         Poco::Thread::sleep( retrySleep );
     }
     
-    throw std::runtime_error( "SQLiteStore::ExecuteRetry failed" );
+    throw Exception( "ExecuteRetry failed", "SQLiteStore::ExecuteRetry failed" );
 }
 ////////////////////////////////////////////////////////////////////////////////
 Poco::Data::Session SQLiteStore::GetSession(
@@ -1547,7 +1536,8 @@ Poco::Data::Session SQLiteStore::GetSession(
         Poco::Thread::sleep( retrySleep );
     }
     
-    throw std::runtime_error( "SQLiteStore::GetSession failed" );
+    throw Exception( "No session returned",
+                     "SQLiteStore::GetSession failed to return a session" );
 }
 ////////////////////////////////////////////////////////////////////////////////
 } // namespace crunchstore

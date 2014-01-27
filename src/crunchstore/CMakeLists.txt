@@ -4,13 +4,20 @@
 #    )
     
 
-#Lets us address our internal includes as <Persistence/foo.h>
+
+#Lets us address our internal includes as <crunchstore/foo.h>
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
 ADD_DEFINITIONS(-DCRUNCHSTORE_LIBRARY)
 
 FILE( GLOB srcs RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cxx" )
 FILE( GLOB hdrs RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.h" )
+
+if( "${POCO_PocoJSON_LIBRARY}" STREQUAL "" )
+    message( "Removing Serialize" )
+    list(REMOVE_ITEM srcs "Serialize.cxx")
+    list(REMOVE_ITEM hdrs "Serialize.h")
+endif( "${POCO_PocoJSON_LIBRARY}" STREQUAL "" )
 
 list(REMOVE_ITEM srcs "MongoStore.cxx")
 list(REMOVE_ITEM hdrs "MongoStore.h")

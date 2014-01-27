@@ -18,6 +18,8 @@
  *
  *************** <auto-copyright.rb END do not edit this line> ***************/
 #include <crunchstore/DataManager.h>
+#include <crunchstore/NullCache.h>
+#include <crunchstore/NullBuffer.h>
 
 namespace crunchstore
 {
@@ -25,7 +27,8 @@ namespace crunchstore
 DataManager::DataManager()
 {
     m_dataMultiplexer = DataAbstractionLayerPtr( new Multiplexer );
-    //std::cout << "DM: " << this << std::endl << std::flush;
+    SetCache( DataAbstractionLayerPtr( new NullCache ) );
+    SetBuffer( DataAbstractionLayerPtr( new NullBuffer ) );
 }
 ////////////////////////////////////////////////////////////////////////////////
 DataManager::~DataManager()
@@ -54,11 +57,17 @@ void DataManager::DetachStore( DataAbstractionLayerPtr store )
 ////////////////////////////////////////////////////////////////////////////////
 void DataManager::SetCache( DataAbstractionLayerPtr cache )
 {
+    // If we already have a cache and buffer set, re-parent the buffer
+    if( m_child && m_buffer )
+    {
+        cache->SetChild( m_buffer );
+    }
     SetChild( cache );
 }
 ////////////////////////////////////////////////////////////////////////////////
 void DataManager::SetBuffer( DataAbstractionLayerPtr buffer )
 {
+    // m_child is the cache
     m_child->SetChild( buffer );
     m_buffer = buffer;
     m_buffer->SetChild( m_dataMultiplexer );

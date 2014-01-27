@@ -19,6 +19,7 @@
  *************** <auto-copyright.rb END do not edit this line> ***************/
 #include <crunchstore/Multiplexer.h>
 #include <crunchstore/Persistable.h>
+#include <crunchstore/Exception.h>
 
 #include <iostream>
 
@@ -288,6 +289,7 @@ void Multiplexer::DetachStore( DataAbstractionLayerPtr store )
 
     // Do we want to throw if the passed store wasn't found?
     //throw "DetachStore: unable to find store.";
+    throw Exception( "Detach Store Error", "Unable to find store" );
 }
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::Drop( const std::string& typeName, Role role  )
