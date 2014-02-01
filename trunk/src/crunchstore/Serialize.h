@@ -12,7 +12,7 @@ namespace crunchstore
 {
 
 using Poco::Dynamic::Var;
-class Serialize
+class CRUNCHSTORE_EXPORT Serialize
 {
 public:
     Serialize();
