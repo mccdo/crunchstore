@@ -48,9 +48,7 @@ SET(TARGET_SRC ${srcs})
 SET(TARGET_NAME asMemberTest)
 ADD_EXECUTABLE(${TARGET_NAME} ${TARGET_SRC})
 TARGET_LINK_LIBRARIES(${TARGET_NAME} crunchstore ${MONGO_DRIVER_LIBS} ${Boost_LIBRARIES})
-if(LINUX)
-    TARGET_LINK_LIBRARIES(${TARGET_NAME} rt)
-endif()
+
 SET(INSTALL_BINDIR bin)
 
 INSTALL(
@@ -62,3 +60,19 @@ install(FILES data.json
     DESTINATION bin
     COMPONENT development)
 endif()
+
+################################################################################
+#set( srcs odbcTest.cxx )
+#
+#SET(TARGET_SRC ${srcs})
+#
+#SET(TARGET_NAME odbc)
+#ADD_EXECUTABLE(${TARGET_NAME} ${TARGET_SRC})
+#TARGET_LINK_LIBRARIES(${TARGET_NAME} ${POCO_LIBRARIES})
+#
+#SET(INSTALL_BINDIR bin)
+#
+#INSTALL(
+#        TARGETS ${TARGET_NAME}
+#        RUNTIME DESTINATION ${INSTALL_BINDIR}
+#    )
