@@ -262,6 +262,10 @@ void Multiplexer::AttachStore( DataAbstractionLayerPtr store,
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::DetachStore( DataAbstractionLayerPtr store )
 {
+    if( !store )
+    {
+        return;
+    }
     StoreListType::iterator it = m_stores.begin();
     while( it != m_stores.end() )
     {
@@ -287,8 +291,6 @@ void Multiplexer::DetachStore( DataAbstractionLayerPtr store )
 
     }
 
-    // Do we want to throw if the passed store wasn't found?
-    //throw "DetachStore: unable to find store.";
     throw Exception( "Detach Store Error", "Unable to find store" );
 }
 ////////////////////////////////////////////////////////////////////////////////
