@@ -291,7 +291,8 @@ void Multiplexer::DetachStore( DataAbstractionLayerPtr store )
 
     }
 
-    throw Exception( "Detach Store Error", "Unable to find store" );
+    // Don't throw exception here if store wasn't found; that's acceptable
+    // calling behavior.
 }
 ////////////////////////////////////////////////////////////////////////////////
 void Multiplexer::Drop( const std::string& typeName, Role role  )
