@@ -966,11 +966,7 @@ Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transact
         {
             //std::cout << "Returning the saved session..." << std::flush;
             transactionInProgress = true;
-            Poco::Data::Session& tempSes = key.GetSession();
-#if POCO_VERSION > 0x01050200
-            tempSes.setConnectionTimeout( 100 );
-#endif
-            return tempSes;
+            return key.GetSession();
         }
         else
         {
@@ -996,6 +992,15 @@ void SQLiteStore::SetupDBProperties( Poco::Data::Session& session )
         session.setProperty( "transactionMode", std::string("IMMEDIATE") );
         session.setProperty( "maxRetrySleep", 100 );
         session.setProperty( "minRetrySleep", 50 );
+    }
+    catch( Poco::Data::DataException& ex )
+    {
+        CRUNCHSTORE_LOG_INFO( ex.displayText() );
+    }
+#elif POCO_VERSION > 0x01050200
+    try
+    {
+        session.setProperty( "connectionTimeout", 100 );
     }
     catch( Poco::Data::DataException& ex )
     {
@@ -1527,11 +1532,7 @@ Poco::Data::Session SQLiteStore::GetSession(
     {
         try
         {
-            Poco::Data::Session& tempSes = m_pool->get();
-#if POCO_VERSION > 0x01050200
-            tempSes.setConnectionTimeout( 100 );
-#endif
-            return tempSes;
+            return m_pool->get();
         }
         catch( Poco::Data::ExecutionException const& )
         {
