@@ -241,7 +241,7 @@ void SQLiteStore::LoadImpl( Persistable& persistable, Role,
                             const TransactionKey& transactionKey )
 {
     CRUNCHSTORE_LOG_TRACE( "LoadImpl" );
-    
+
     if( !m_pool )
     {
         return;
@@ -966,7 +966,11 @@ Poco::Data::Session SQLiteStore::GetSessionByKey( const TransactionKey& transact
         {
             //std::cout << "Returning the saved session..." << std::flush;
             transactionInProgress = true;
-            return key.GetSession();
+            Poco::Data::Session& tempSes = key.GetSession();
+#if POCO_VERSION > 0x01050200
+            tempSes.setConnectionTimeout( 100 );
+#endif
+            return tempSes;
         }
         else
         {
@@ -1523,7 +1527,11 @@ Poco::Data::Session SQLiteStore::GetSession(
     {
         try
         {
-            return m_pool->get();
+            Poco::Data::Session& tempSes = m_pool->get();
+#if POCO_VERSION > 0x01050200
+            tempSes.setConnectionTimeout( 100 );
+#endif
+            return tempSes;
         }
         catch( Poco::Data::ExecutionException const& )
         {
