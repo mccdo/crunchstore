@@ -997,10 +997,11 @@ void SQLiteStore::SetupDBProperties( Poco::Data::Session& session )
     {
         CRUNCHSTORE_LOG_INFO( ex.displayText() );
     }
-#elif POCO_VERSION > 0x01050200
+#elif POCO_VERSION > 0x01040900
     try
     {
-        session.setProperty( "connectionTimeout", 100 );
+        //session.setProperty( "connectionTimeout", 100 );
+        session.setConnectionTimeout( 100 );
     }
     catch( Poco::Data::DataException& ex )
     {
